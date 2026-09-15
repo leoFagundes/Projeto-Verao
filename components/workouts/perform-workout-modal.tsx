@@ -5,10 +5,14 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
+import { VideoLightbox } from "@/components/ui/video-lightbox";
+import { deleteActiveSession, saveActiveSession } from "@/lib/firebase/active-sessions";
 import { createSession } from "@/lib/firebase/sessions";
+import { useActiveSessions } from "@/lib/hooks/use-active-sessions";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { detectNewRecords, lastWeightForExercise } from "@/lib/stats";
 import { cn, formatDateInput, parseDateInput } from "@/lib/utils";
@@ -18,6 +22,7 @@ import type { Workout } from "@/types/workout";
 import { RestTimer } from "./rest-timer";
 
 const TIMER_PREF_KEY = "projeto-verao-rest-timer-enabled";
+const AUTOSAVE_DELAY_MS = 900;
 
 function visibleExercises(workout: Workout) {
   return workout.exercises.filter((exercise) => !exercise.hidden);
@@ -47,6 +52,14 @@ function isComplete(log: SessionExerciseLog) {
   return log.sets.length > 0 && log.sets.every((set) => set.done);
 }
 
+function hasProgress(exerciseLogs: SessionExerciseLog[], durationMin: number, note: string) {
+  return (
+    note.trim() !== "" ||
+    durationMin !== 45 ||
+    exerciseLogs.some((log) => log.sets.some((set) => set.done))
+  );
+}
+
 export function PerformWorkoutModal({
   open,
   onClose,
@@ -59,6 +72,9 @@ export function PerformWorkoutModal({
   profileId: string;
 }) {
   const { sessions } = useSessions(profileId);
+  const { activeSessions } = useActiveSessions(profileId);
+  const draft = activeSessions.find((item) => item.workoutId === workout.id) ?? null;
+
   const [date, setDate] = useState(() => formatDateInput(Date.now()));
   const [durationMin, setDurationMin] = useState(45);
   const [note, setNote] = useState("");
@@ -71,6 +87,9 @@ export function PerformWorkoutModal({
   const [resting, setResting] = useState<{ key: number; seconds: number } | null>(null);
   const restKeyRef = useRef(0);
   const [viewingImagesFor, setViewingImagesFor] = useState<string | null>(null);
+  const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
     // Browser-only preference, can't be read during render (SSR has no
@@ -88,20 +107,52 @@ export function PerformWorkoutModal({
   }
 
   useEffect(() => {
-    // Re-roll the form fresh every time the modal opens (today's date, target
-    // sets/reps, last logged weight per exercise) — needs Date.now() and the
-    // latest sessions, so it can't be computed purely during render.
+    // Re-roll the form fresh every time the modal opens — resuming a saved
+    // draft if one exists for this workout, otherwise today's date, target
+    // sets/reps and the last logged weight per exercise. Needs Date.now()
+    // and the latest sessions/draft, so it can't be computed during render.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (!open) return;
-    setDate(formatDateInput(Date.now()));
-    setDurationMin(45);
-    setNote("");
-    setExerciseLogs(buildInitialLogs(workout, sessions));
-    setExpandedId(visibleExercises(workout)[0]?.id ?? null);
+    if (draft) {
+      setDate(formatDateInput(draft.date));
+      setDurationMin(draft.durationMin);
+      setNote(draft.note);
+      setExerciseLogs(draft.exercises);
+      startedAtRef.current = draft.startedAt;
+      setExpandedId(draft.exercises.find((log) => !isComplete(log))?.id ?? null);
+    } else {
+      setDate(formatDateInput(Date.now()));
+      setDurationMin(45);
+      setNote("");
+      setExerciseLogs(buildInitialLogs(workout, sessions));
+      startedAtRef.current = Date.now();
+      setExpandedId(visibleExercises(workout)[0]?.id ?? null);
+    }
     setResting(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-rolls on open, using latest workout/sessions closures
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-rolls on open, using latest workout/sessions/draft closures
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !hasProgress(exerciseLogs, durationMin, note)) return;
+
+    const timeout = setTimeout(() => {
+      saveActiveSession(profileId, {
+        workoutId: workout.id,
+        workoutName: workout.name,
+        date: parseDateInput(date),
+        durationMin,
+        note: note.trim(),
+        exercises: exerciseLogs,
+        startedAt: startedAtRef.current,
+      }).catch(() => {
+        // Best-effort autosave — a failed save just means we retry on the
+        // next change, no need to interrupt the workout with an error toast.
+      });
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => clearTimeout(timeout);
+  }, [open, profileId, workout.id, workout.name, date, durationMin, note, exerciseLogs]);
 
   function toggleExpanded(id: string) {
     setExpandedId((current) => (current === id ? null : id));
@@ -168,6 +219,7 @@ export function PerformWorkoutModal({
         note: note.trim(),
         exercises: exerciseLogs,
       });
+      await deleteActiveSession(profileId, workout.id).catch(() => {});
       toast.success("Treino registrado!");
       for (const record of records) {
         toast.success(`🏆 Novo recorde: ${record.name} — ${record.weight}kg!`, { duration: 5000 });
@@ -180,9 +232,46 @@ export function PerformWorkoutModal({
     }
   }
 
+  function resetWorkout() {
+    setDate(formatDateInput(Date.now()));
+    setDurationMin(45);
+    setNote("");
+    setExerciseLogs(buildInitialLogs(workout, sessions));
+    setExpandedId(visibleExercises(workout)[0]?.id ?? null);
+    setResting(null);
+    startedAtRef.current = Date.now();
+    deleteActiveSession(profileId, workout.id).catch(() => {});
+    toast.success("Treino reiniciado.");
+  }
+
+  const progressInProgress = hasProgress(exerciseLogs, durationMin, note);
+
   return (
     <Modal open={open} onClose={onClose} title={`Realizar: ${workout.name}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {draft ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-2.5 text-xs text-slate-200">
+            <span>Continuando um treino que você já tinha começado.</span>
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="shrink-0 font-medium text-[var(--accent)] hover:underline"
+            >
+              ↺ Reiniciar
+            </button>
+          </div>
+        ) : progressInProgress ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="text-xs font-medium text-slate-400 hover:text-white"
+            >
+              ↺ Reiniciar treino
+            </button>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Data">
             <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
@@ -200,20 +289,19 @@ export function PerformWorkoutModal({
         <button
           type="button"
           onClick={toggleTimerEnabled}
-          className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2.5"
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3"
         >
           <span className="text-sm text-slate-300">Timer de descanso</span>
           <span
-            className={cn(
-              "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-              timerEnabled ? "bg-[var(--accent)]" : "bg-[var(--field-bg)]",
-            )}
+            role="switch"
+            aria-checked={timerEnabled}
+            className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200"
+            style={{ backgroundColor: timerEnabled ? "var(--accent)" : "var(--field-bg)" }}
           >
             <span
-              className={cn(
-                "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                timerEnabled ? "translate-x-[18px]" : "translate-x-0.5",
-              )}
+              aria-hidden="true"
+              className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+              style={{ transform: timerEnabled ? "translateX(22px)" : "translateX(2px)" }}
             />
           </span>
         </button>
@@ -302,63 +390,77 @@ export function PerformWorkoutModal({
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="space-y-2 px-3 pb-3">
+                      <div className="space-y-3 px-3 pb-3">
                         {source?.videoUrl ? (
-                          <a
-                            href={source.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => setViewingVideoUrl(source.videoUrl)}
                             className="inline-block text-xs text-[var(--accent)] hover:underline"
                           >
                             ▶ Ver vídeo de como fazer
-                          </a>
+                          </button>
                         ) : null}
-                        <div className="grid grid-cols-[1.4rem_1fr_1fr_1.5rem_1.25rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                          <span>Série</span>
-                          <span>Reps</span>
-                          <span>Carga (kg)</span>
-                          <span className="text-center">OK</span>
-                          <span />
-                        </div>
-                        {log.sets.map((set, index) => (
-                          <div
-                            key={index}
-                            className="grid grid-cols-[1.4rem_1fr_1fr_1.5rem_1.25rem] items-center gap-2"
-                          >
-                            <span className="text-center text-xs text-slate-400">{index + 1}</span>
-                            <input
-                              value={set.reps}
-                              onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-1.5 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={set.weight ?? ""}
-                              onChange={(event) =>
-                                updateSet(log.id, index, {
-                                  weight: event.target.value === "" ? null : Number(event.target.value),
-                                })
-                              }
-                              placeholder="kg"
-                              className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-1.5 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
-                            />
-                            <input
-                              type="checkbox"
-                              checked={set.done}
-                              onChange={(event) => updateSet(log.id, index, { done: event.target.checked })}
-                              className="mx-auto h-4 w-4 accent-[var(--accent)]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeSet(log.id, index)}
-                              className="text-sm text-slate-500 hover:text-red-300"
-                              aria-label="Remover série"
-                            >
-                              ✕
-                            </button>
+
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-[1.75rem_1fr_1fr_2.25rem_1.5rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                            <span />
+                            <span>Reps</span>
+                            <span>Carga (kg)</span>
+                            <span className="text-center">OK</span>
+                            <span />
                           </div>
-                        ))}
+                          {log.sets.map((set, index) => (
+                            <div
+                              key={index}
+                              className="grid grid-cols-[1.75rem_1fr_1fr_2.25rem_1.5rem] items-center gap-2"
+                            >
+                              <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)] text-xs font-medium text-slate-300">
+                                {index + 1}
+                              </span>
+                              <input
+                                value={set.reps}
+                                onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
+                                placeholder="Reps"
+                                className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                              />
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={set.weight ?? ""}
+                                onChange={(event) =>
+                                  updateSet(log.id, index, {
+                                    weight: event.target.value === "" ? null : Number(event.target.value),
+                                  })
+                                }
+                                placeholder="Kg"
+                                className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => updateSet(log.id, index, { done: !set.done })}
+                                aria-pressed={set.done}
+                                aria-label={set.done ? "Marcar série como não concluída" : "Marcar série como concluída"}
+                                className="grid h-7 w-7 place-items-center justify-self-center rounded-full border-2 text-sm font-bold transition"
+                                style={
+                                  set.done
+                                    ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
+                                    : { borderColor: "var(--border-strong)", color: "transparent" }
+                                }
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeSet(log.id, index)}
+                                className="justify-self-center text-sm text-slate-500 hover:text-red-300"
+                                aria-label="Remover série"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => addSet(log.id)}
@@ -393,6 +495,22 @@ export function PerformWorkoutModal({
         images={workout.exercises.find((exercise) => exercise.id === viewingImagesFor)?.images ?? []}
         open={viewingImagesFor !== null}
         onClose={() => setViewingImagesFor(null)}
+      />
+
+      <VideoLightbox
+        url={viewingVideoUrl}
+        open={viewingVideoUrl !== null}
+        onClose={() => setViewingVideoUrl(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reiniciar treino?"
+        description="Isso apaga o progresso atual (séries marcadas, cargas e nota) e começa do zero."
+        confirmLabel="Reiniciar"
+        danger
+        onClose={() => setConfirmReset(false)}
+        onConfirm={resetWorkout}
       />
     </Modal>
   );

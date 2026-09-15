@@ -6,12 +6,18 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+import { ChartIcon, DumbbellIcon, RunIcon, ScaleIcon } from "./nav-icons";
+
 function tabsFor(profileId: string) {
   return [
-    { href: `/perfil/${profileId}/treinos`, label: "Treinos", icon: "🏋️" },
-    { href: `/perfil/${profileId}/visao-geral`, label: "Visão geral", icon: "📊" },
-    { href: `/perfil/${profileId}/corridas`, label: "Corridas", icon: "🏃" },
-    { href: `/perfil/${profileId}/medidas`, label: "Medidas", icon: "⚖️" },
+    { href: `/perfil/${profileId}/treinos`, label: "Treinos", icon: DumbbellIcon },
+    { href: `/perfil/${profileId}/corridas`, label: "Corridas", icon: RunIcon },
+    {
+      href: `/perfil/${profileId}/visao-geral`,
+      label: "Visão geral",
+      icon: ChartIcon,
+    },
+    { href: `/perfil/${profileId}/medidas`, label: "Medidas", icon: ScaleIcon },
   ];
 }
 
@@ -44,11 +50,11 @@ export function BottomNav({ profileId }: { profileId: string }) {
                 ) : null}
                 <span
                   className={cn(
-                    "relative z-10 text-[19px] leading-none transition-all duration-200",
-                    active ? "scale-105 opacity-100" : "opacity-50",
+                    "relative z-10 flex transition-all duration-200",
+                    active ? "scale-105 opacity-100 text-[var(--accent)]" : "opacity-50 text-slate-400",
                   )}
                 >
-                  {tab.icon}
+                  <tab.icon className="h-5 w-5" />
                 </span>
                 <span
                   className={cn(
@@ -83,7 +89,10 @@ export function TopTabs({ profileId }: { profileId: string }) {
                 layoutId="top-tabs-active-pill"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 className="absolute inset-0 rounded-full"
-                style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                }}
               />
             ) : null}
             <span

@@ -10,6 +10,7 @@ import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyWorkoutModal } from "@/components/workouts/copy-workout-modal";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { PerformWorkoutModal } from "@/components/workouts/perform-workout-modal";
 import { SessionHistoryList } from "@/components/workouts/session-history-list";
 import { WorkoutForm } from "@/components/workouts/workout-form";
@@ -31,6 +32,7 @@ export default function WorkoutDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [viewingImages, setViewingImages] = useState<Exercise | null>(null);
+  const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
 
   const workout = useMemo(
     () => workouts.find((item) => item.id === params.workoutId) ?? null,
@@ -191,14 +193,13 @@ export default function WorkoutDetailPage() {
                       {exercise.restSeconds ? ` · ${exercise.restSeconds}s descanso` : ""}
                     </p>
                     {exercise.videoUrl ? (
-                      <a
-                        href={exercise.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => setViewingVideoUrl(exercise.videoUrl)}
                         className="text-xs text-[var(--accent)] hover:underline"
                       >
                         ▶ Ver vídeo de como fazer
-                      </a>
+                      </button>
                     ) : null}
                     {exercise.notes ? (
                       <p className="mt-1 text-xs text-slate-500">{exercise.notes}</p>
@@ -276,6 +277,12 @@ export default function WorkoutDetailPage() {
         images={viewingImages?.images ?? []}
         open={viewingImages !== null}
         onClose={() => setViewingImages(null)}
+      />
+
+      <VideoLightbox
+        url={viewingVideoUrl}
+        open={viewingVideoUrl !== null}
+        onClose={() => setViewingVideoUrl(null)}
       />
 
       <CopyWorkoutModal

@@ -33,3 +33,26 @@ export type WorkoutSessionInput = {
   note: string;
   exercises: SessionExerciseLog[];
 };
+
+/** A workout in progress — saved as you go so closing the modal never loses it. */
+export type ActiveSession = {
+  id: string;
+  workoutId: string;
+  workoutName: string;
+  date: number;
+  durationMin: number;
+  note: string;
+  exercises: SessionExerciseLog[];
+  startedAt: number;
+  updatedAt: number;
+};
+
+export type ActiveSessionInput = {
+  workoutId: string;
+  workoutName: string;
+  date: number;
+  durationMin: number;
+  note: string;
+  exercises: SessionExerciseLog[];
+  startedAt: number;
+};

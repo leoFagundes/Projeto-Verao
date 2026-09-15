@@ -69,7 +69,7 @@ export function ImageLightbox({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] bg-black/92"
+          className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-2xl"
         >
           <button
             type="button"

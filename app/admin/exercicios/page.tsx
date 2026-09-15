@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
+import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { createExerciseDef, deleteExerciseDef, updateExerciseDef } from "@/lib/firebase/exercises";
 import { useExercises } from "@/lib/hooks/use-exercises";
 import type { ExerciseDef, ExerciseDefInput } from "@/types/exercise";
@@ -21,6 +22,7 @@ function ExerciseLibraryContent() {
   const [editing, setEditing] = useState<ExerciseDef | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ExerciseDef | null>(null);
   const [viewingImages, setViewingImages] = useState<ExerciseDef | null>(null);
+  const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
 
   async function handleCreate(values: ExerciseDefInput) {
     try {
@@ -123,14 +125,13 @@ function ExerciseLibraryContent() {
                       <p className="text-xs text-slate-400">{exercise.muscleGroup}</p>
                     ) : null}
                     {exercise.videoUrl ? (
-                      <a
-                        href={exercise.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => setViewingVideoUrl(exercise.videoUrl)}
                         className="text-xs text-[var(--accent)] hover:underline"
                       >
                         ▶ Ver vídeo
-                      </a>
+                      </button>
                     ) : null}
                     <div className="mt-1 flex gap-2">
                       <button
@@ -177,6 +178,12 @@ function ExerciseLibraryContent() {
         images={viewingImages?.images ?? []}
         open={viewingImages !== null}
         onClose={() => setViewingImages(null)}
+      />
+
+      <VideoLightbox
+        url={viewingVideoUrl}
+        open={viewingVideoUrl !== null}
+        onClose={() => setViewingVideoUrl(null)}
       />
 
       <ConfirmDialog

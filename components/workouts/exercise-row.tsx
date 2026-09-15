@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { VideoLightbox } from "@/components/ui/video-lightbox";
 import type { MuscleGroup } from "@/types/workout";
 
 export type FormExercise = {
@@ -34,6 +35,7 @@ export function ExerciseRow({
 }) {
   const controls = useDragControls();
   const [viewingImages, setViewingImages] = useState(false);
+  const [viewingVideo, setViewingVideo] = useState(false);
 
   return (
     <Reorder.Item
@@ -75,14 +77,13 @@ export function ExerciseRow({
                   <p className="text-xs text-slate-400">{exercise.muscleGroup}</p>
                 ) : null}
                 {exercise.videoUrl ? (
-                  <a
-                    href={exercise.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setViewingVideo(true)}
                     className="text-xs text-[var(--accent)] hover:underline"
                   >
                     ▶ Ver vídeo
-                  </a>
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -153,6 +154,12 @@ export function ExerciseRow({
         images={exercise.images}
         open={viewingImages}
         onClose={() => setViewingImages(false)}
+      />
+
+      <VideoLightbox
+        url={exercise.videoUrl}
+        open={viewingVideo}
+        onClose={() => setViewingVideo(false)}
       />
     </Reorder.Item>
   );
