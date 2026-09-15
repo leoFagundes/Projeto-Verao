@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { MultiImageUpload } from "@/components/ui/multi-image-upload";
 import { MUSCLE_GROUPS, type MuscleGroup } from "@/types/workout";
 import type { ExerciseDefInput } from "@/types/exercise";
 
@@ -21,7 +21,8 @@ export function ExerciseDefForm({
 }) {
   const [name, setName] = useState(initialValues?.name ?? "");
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | "">(initialValues?.muscleGroup ?? "");
-  const [imageUrl, setImageUrl] = useState<string | null>(initialValues?.imageUrl ?? null);
+  const [images, setImages] = useState<string[]>(initialValues?.images ?? []);
+  const [videoUrl, setVideoUrl] = useState(initialValues?.videoUrl ?? "");
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,13 +35,15 @@ export function ExerciseDefForm({
       await onSubmit({
         name: name.trim(),
         muscleGroup: muscleGroup || null,
-        imageUrl,
+        images,
+        videoUrl: videoUrl.trim() || null,
         notes: notes.trim(),
       });
       if (!initialValues) {
         setName("");
         setMuscleGroup("");
-        setImageUrl(null);
+        setImages([]);
+        setVideoUrl("");
         setNotes("");
       }
     } finally {
@@ -50,22 +53,30 @@ export function ExerciseDefForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-        <ImageUpload
-          value={imageUrl}
-          onChange={setImageUrl}
-          folder="exercises"
-          label="Imagem (opcional)"
+      <Field label="Nome">
+        <Input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ex.: Supino reto"
+          required
         />
-        <Field label="Nome" className="flex-1">
-          <Input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Ex.: Supino reto"
-            required
-          />
-        </Field>
-      </div>
+      </Field>
+
+      <MultiImageUpload
+        values={images}
+        onChange={setImages}
+        folder="exercises"
+        label="Imagens (opcional, pode adicionar mais de uma)"
+      />
+
+      <Field label="Vídeo de como fazer (link do YouTube, opcional)">
+        <Input
+          type="url"
+          value={videoUrl}
+          onChange={(event) => setVideoUrl(event.target.value)}
+          placeholder="https://youtube.com/..."
+        />
+      </Field>
 
       <Field label="Grupo muscular">
         <Select

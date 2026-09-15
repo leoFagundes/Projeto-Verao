@@ -10,6 +10,7 @@ import { ExerciseDefForm } from "@/components/workouts/exercise-def-form";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
 import { createExerciseDef, deleteExerciseDef, updateExerciseDef } from "@/lib/firebase/exercises";
 import { useExercises } from "@/lib/hooks/use-exercises";
@@ -19,6 +20,7 @@ function ExerciseLibraryContent() {
   const { exercises, loading } = useExercises();
   const [editing, setEditing] = useState<ExerciseDef | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ExerciseDef | null>(null);
+  const [viewingImages, setViewingImages] = useState<ExerciseDef | null>(null);
 
   async function handleCreate(values: ExerciseDefInput) {
     try {
@@ -32,7 +34,7 @@ function ExerciseLibraryContent() {
   async function handleUpdate(values: ExerciseDefInput) {
     if (!editing) return;
     try {
-      await updateExerciseDef(editing.id, values, editing.imageUrl);
+      await updateExerciseDef(editing.id, values, editing.images);
       toast.success("Exercício atualizado!");
       setEditing(null);
     } catch (error) {
@@ -97,13 +99,19 @@ function ExerciseLibraryContent() {
                   key={exercise.id}
                   className="flex items-center gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface)] p-3"
                 >
-                  {exercise.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={exercise.imageUrl}
-                      alt={exercise.name}
-                      className="h-14 w-14 shrink-0 rounded-xl object-cover"
-                    />
+                  {exercise.images.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingImages(exercise)}
+                      className="shrink-0"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={exercise.images[0]}
+                        alt={exercise.name}
+                        className="h-14 w-14 rounded-xl object-cover"
+                      />
+                    </button>
                   ) : (
                     <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-xl">
                       🏋️
@@ -113,6 +121,16 @@ function ExerciseLibraryContent() {
                     <p className="truncate text-sm font-medium text-white">{exercise.name}</p>
                     {exercise.muscleGroup ? (
                       <p className="text-xs text-slate-400">{exercise.muscleGroup}</p>
+                    ) : null}
+                    {exercise.videoUrl ? (
+                      <a
+                        href={exercise.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[var(--accent)] hover:underline"
+                      >
+                        ▶ Ver vídeo
+                      </a>
                     ) : null}
                     <div className="mt-1 flex gap-2">
                       <button
@@ -144,7 +162,8 @@ function ExerciseLibraryContent() {
             initialValues={{
               name: editing.name,
               muscleGroup: editing.muscleGroup,
-              imageUrl: editing.imageUrl,
+              images: editing.images,
+              videoUrl: editing.videoUrl,
               notes: editing.notes,
             }}
             submitLabel="Salvar alterações"
@@ -153,6 +172,12 @@ function ExerciseLibraryContent() {
           />
         ) : null}
       </Modal>
+
+      <ImageLightbox
+        images={viewingImages?.images ?? []}
+        open={viewingImages !== null}
+        onClose={() => setViewingImages(null)}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

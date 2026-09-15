@@ -23,7 +23,8 @@ function exerciseFromDef(def: ExerciseDef): FormExercise {
     weight: null,
     restSeconds: 60,
     muscleGroup: def.muscleGroup,
-    imageUrl: def.imageUrl,
+    images: def.images,
+    videoUrl: def.videoUrl,
     notes: "",
     hidden: false,
   };

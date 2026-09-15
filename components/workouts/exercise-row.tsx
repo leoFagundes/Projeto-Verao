@@ -1,8 +1,10 @@
 "use client";
 
 import { Reorder, useDragControls } from "framer-motion";
+import { useState } from "react";
 
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import type { MuscleGroup } from "@/types/workout";
 
 export type FormExercise = {
@@ -14,7 +16,8 @@ export type FormExercise = {
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;
-  imageUrl: string | null;
+  images: string[];
+  videoUrl: string | null;
   notes: string;
   hidden: boolean;
 };
@@ -30,6 +33,7 @@ export function ExerciseRow({
   onRemove: () => void;
 }) {
   const controls = useDragControls();
+  const [viewingImages, setViewingImages] = useState(false);
 
   return (
     <Reorder.Item
@@ -51,13 +55,15 @@ export function ExerciseRow({
         <div className="flex-1 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              {exercise.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={exercise.imageUrl}
-                  alt={exercise.name}
-                  className="h-11 w-11 shrink-0 rounded-xl object-cover"
-                />
+              {exercise.images.length > 0 ? (
+                <button type="button" onClick={() => setViewingImages(true)} className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={exercise.images[0]}
+                    alt={exercise.name}
+                    className="h-11 w-11 rounded-xl object-cover"
+                  />
+                </button>
               ) : (
                 <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-lg">
                   🏋️
@@ -67,6 +73,16 @@ export function ExerciseRow({
                 <p className="truncate text-sm font-medium text-white">{exercise.name}</p>
                 {exercise.muscleGroup ? (
                   <p className="text-xs text-slate-400">{exercise.muscleGroup}</p>
+                ) : null}
+                {exercise.videoUrl ? (
+                  <a
+                    href={exercise.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[var(--accent)] hover:underline"
+                  >
+                    ▶ Ver vídeo
+                  </a>
                 ) : null}
               </div>
             </div>
@@ -132,6 +148,12 @@ export function ExerciseRow({
           </Field>
         </div>
       </div>
+
+      <ImageLightbox
+        images={exercise.images}
+        open={viewingImages}
+        onClose={() => setViewingImages(false)}
+      />
     </Reorder.Item>
   );
 }

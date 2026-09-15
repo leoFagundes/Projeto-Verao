@@ -4,7 +4,8 @@ export type ExerciseDef = {
   id: string;
   name: string;
   muscleGroup: MuscleGroup | null;
-  imageUrl: string | null;
+  images: string[];
+  videoUrl: string | null;
   notes: string;
   createdAt: number;
 };
@@ -12,6 +13,7 @@ export type ExerciseDef = {
 export type ExerciseDefInput = {
   name: string;
   muscleGroup: MuscleGroup | null;
-  imageUrl: string | null;
+  images: string[];
+  videoUrl: string | null;
   notes: string;
 };

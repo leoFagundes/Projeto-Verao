@@ -30,7 +30,10 @@ export function ProfileShell({
   }, [profile.theme]);
 
   return (
-    <div data-theme={profile.theme} className="min-h-dvh bg-[var(--bg)] text-white">
+    <div
+      data-theme={profile.theme}
+      className="min-h-dvh bg-[var(--bg)] text-white"
+    >
       <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-16">
         <header className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[0_25px_80px_rgba(0,0,0,0.45)]">
           <div className="flex items-center justify-between gap-3">
@@ -50,10 +53,12 @@ export function ProfileShell({
                   textClassName="text-sm"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-xs uppercase tracking-[0.24em] text-[var(--accent)]">
+                  {/* <p className="truncate text-xs uppercase tracking-[0.24em] text-[var(--accent)]">
                     {theme.label}
-                  </p>
-                  <h1 className="truncate text-lg font-semibold text-white">{profile.name}</h1>
+                  </p> */}
+                  <h1 className="truncate text-lg font-semibold text-white">
+                    {profile.name}
+                  </h1>
                 </div>
               </div>
             </div>

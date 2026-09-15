@@ -22,7 +22,8 @@ export type Exercise = {
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;
-  imageUrl: string | null;
+  images: string[];
+  videoUrl: string | null;
   notes: string;
   hidden: boolean;
 };

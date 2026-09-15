@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyWorkoutModal } from "@/components/workouts/copy-workout-modal";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PerformWorkoutModal } from "@/components/workouts/perform-workout-modal";
 import { SessionHistoryList } from "@/components/workouts/session-history-list";
 import { WorkoutForm } from "@/components/workouts/workout-form";
@@ -29,6 +30,7 @@ export default function WorkoutDetailPage() {
   const [performOpen, setPerformOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [viewingImages, setViewingImages] = useState<Exercise | null>(null);
 
   const workout = useMemo(
     () => workouts.find((item) => item.id === params.workoutId) ?? null,
@@ -141,13 +143,24 @@ export default function WorkoutDetailPage() {
                 className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4"
               >
                 <div className="flex gap-4">
-                  {exercise.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={exercise.imageUrl}
-                      alt={exercise.name}
-                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                    />
+                  {exercise.images.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingImages(exercise)}
+                      className="relative shrink-0"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={exercise.images[0]}
+                        alt={exercise.name}
+                        className="h-16 w-16 rounded-xl object-cover"
+                      />
+                      {exercise.images.length > 1 ? (
+                        <span className="absolute bottom-1 right-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                          +{exercise.images.length - 1}
+                        </span>
+                      ) : null}
+                    </button>
                   ) : (
                     <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-xl">
                       🏋️
@@ -177,6 +190,16 @@ export default function WorkoutDetailPage() {
                       {exercise.weight ? ` · alvo ${exercise.weight}kg` : ""}
                       {exercise.restSeconds ? ` · ${exercise.restSeconds}s descanso` : ""}
                     </p>
+                    {exercise.videoUrl ? (
+                      <a
+                        href={exercise.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[var(--accent)] hover:underline"
+                      >
+                        ▶ Ver vídeo de como fazer
+                      </a>
+                    ) : null}
                     {exercise.notes ? (
                       <p className="mt-1 text-xs text-slate-500">{exercise.notes}</p>
                     ) : null}
@@ -247,6 +270,12 @@ export default function WorkoutDetailPage() {
         onClose={() => setPerformOpen(false)}
         workout={workout}
         profileId={params.id}
+      />
+
+      <ImageLightbox
+        images={viewingImages?.images ?? []}
+        open={viewingImages !== null}
+        onClose={() => setViewingImages(null)}
       />
 
       <CopyWorkoutModal

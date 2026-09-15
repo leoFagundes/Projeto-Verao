@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 
 import { generateId } from "@/lib/utils";
-import type { Workout, WorkoutInput } from "@/types/workout";
+import type { Exercise, Workout, WorkoutInput } from "@/types/workout";
 
 import { db } from "./client";
 
@@ -27,6 +27,25 @@ function workoutsRef(profileId: string) {
   return collection(requireDb(), "profiles", profileId, "workouts");
 }
 
+/** Reads pre-multi-image exercise entries (`imageUrl`) as a one-item `images` array. */
+function normalizeStoredExercise(exercise: Record<string, unknown>): Exercise {
+  const legacyImageUrl = exercise.imageUrl as string | null | undefined;
+  return {
+    id: exercise.id as string,
+    exerciseId: exercise.exerciseId as string,
+    name: exercise.name as string,
+    sets: exercise.sets as number,
+    reps: exercise.reps as string,
+    weight: (exercise.weight as number | null) ?? null,
+    restSeconds: (exercise.restSeconds as number | null) ?? null,
+    muscleGroup: (exercise.muscleGroup as Exercise["muscleGroup"]) ?? null,
+    images: (exercise.images as string[] | undefined) ?? (legacyImageUrl ? [legacyImageUrl] : []),
+    videoUrl: (exercise.videoUrl as string | null | undefined) ?? null,
+    notes: (exercise.notes as string) ?? "",
+    hidden: (exercise.hidden as boolean) ?? false,
+  };
+}
+
 export function subscribeWorkouts(
   profileId: string,
   onData: (workouts: Workout[]) => void,
@@ -39,10 +58,16 @@ export function subscribeWorkouts(
     q,
     (snapshot) => {
       onData(
-        snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<Workout, "id">),
-        })),
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Omit<Workout, "id" | "exercises"> & {
+            exercises: Record<string, unknown>[];
+          };
+          return {
+            id: docSnap.id,
+            ...data,
+            exercises: data.exercises.map(normalizeStoredExercise),
+          };
+        }),
       );
     },
     (error) => onError?.(error),
@@ -54,6 +79,8 @@ function normalizeExercises(exercises: WorkoutInput["exercises"]) {
     ...exercise,
     id: exercise.id ?? generateId(),
     hidden: exercise.hidden ?? false,
+    images: exercise.images ?? [],
+    videoUrl: exercise.videoUrl ?? null,
   }));
 }
 

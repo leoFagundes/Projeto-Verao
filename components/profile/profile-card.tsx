@@ -17,7 +17,7 @@ export function ProfileCard({ profile, index }: { profile: Profile; index: numbe
       transition={{ delay: index * 0.06, duration: 0.4, ease: "easeOut" }}
     >
       <Link
-        href={`/perfil/${profile.id}`}
+        href={`/perfil/${profile.id}/treinos`}
         data-theme={profile.theme}
         className="group block overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-3 transition duration-300 hover:border-[var(--accent)]"
       >

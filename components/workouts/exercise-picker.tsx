@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { Input } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { createExerciseDef } from "@/lib/firebase/exercises";
 import { useExercises } from "@/lib/hooks/use-exercises";
-import { MUSCLE_GROUPS, type MuscleGroup } from "@/types/workout";
-import type { ExerciseDef } from "@/types/exercise";
+import type { ExerciseDef, ExerciseDefInput } from "@/types/exercise";
+
+import { ExerciseDefForm } from "./exercise-def-form";
 
 export function ExercisePicker({
   open,
@@ -24,11 +24,6 @@ export function ExercisePicker({
   const { exercises, loading } = useExercises();
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
-  const [name, setName] = useState("");
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | "">("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -36,17 +31,9 @@ export function ExercisePicker({
     return exercises.filter((exercise) => exercise.name.toLowerCase().includes(term));
   }, [exercises, search]);
 
-  function reset() {
+  function handleClose() {
     setSearch("");
     setCreating(false);
-    setName("");
-    setMuscleGroup("");
-    setImageUrl(null);
-    setNotes("");
-  }
-
-  function handleClose() {
-    reset();
     onClose();
   }
 
@@ -55,86 +42,25 @@ export function ExercisePicker({
     handleClose();
   }
 
-  async function handleCreate() {
-    if (!name.trim() || submitting) return;
-
-    setSubmitting(true);
+  async function handleCreate(values: ExerciseDefInput) {
     try {
-      const id = await createExerciseDef({
-        name: name.trim(),
-        muscleGroup: muscleGroup || null,
-        imageUrl,
-        notes: notes.trim(),
-      });
+      const id = await createExerciseDef(values);
       toast.success("Exercício criado!");
-      handleSelect({
-        id,
-        name: name.trim(),
-        muscleGroup: muscleGroup || null,
-        imageUrl,
-        notes: notes.trim(),
-        createdAt: Date.now(),
-      });
+      handleSelect({ id, ...values, createdAt: Date.now() });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível criar o exercício.");
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
     <Modal open={open} onClose={handleClose} title="Adicionar exercício">
       {creating ? (
-        <div className="space-y-4">
-          <Field label="Nome">
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Ex.: Supino reto"
-              autoFocus
-              required
-            />
-          </Field>
-
-          <Field label="Grupo muscular">
-            <Select
-              value={muscleGroup}
-              onChange={(event) => setMuscleGroup(event.target.value as MuscleGroup | "")}
-            >
-              <option value="">Selecionar (opcional)</option>
-              {MUSCLE_GROUPS.map((group) => (
-                <option key={group} value={group}>
-                  {group}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <ImageUpload
-            label="Imagem do aparelho (opcional)"
-            value={imageUrl}
-            onChange={setImageUrl}
-            folder="exercises"
-          />
-
-          <Field label="Notas (opcional)">
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              rows={2}
-              placeholder="Ajustes do equipamento, técnica..."
-            />
-          </Field>
-
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleCreate} disabled={!name.trim() || submitting}>
-              {submitting ? "Criando..." : "Criar e adicionar"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setCreating(false)}>
-              Voltar
-            </Button>
-          </div>
-        </div>
+        <ExerciseDefForm
+          initialValues={{ name: search, muscleGroup: null, images: [], videoUrl: null, notes: "" }}
+          submitLabel="Criar e adicionar"
+          onSubmit={handleCreate}
+          onCancel={() => setCreating(false)}
+        />
       ) : (
         <div className="space-y-4">
           <Input
@@ -159,10 +85,10 @@ export function ExercisePicker({
                   onClick={() => handleSelect(exercise)}
                   className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-left transition hover:border-[var(--accent)]"
                 >
-                  {exercise.imageUrl ? (
+                  {exercise.images.length > 0 ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={exercise.imageUrl}
+                      src={exercise.images[0]}
                       alt={exercise.name}
                       className="h-11 w-11 shrink-0 rounded-xl object-cover"
                     />
@@ -182,15 +108,7 @@ export function ExercisePicker({
             )}
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              setName(search);
-              setCreating(true);
-            }}
-          >
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setCreating(true)}>
             + Criar novo exercício
           </Button>
         </div>

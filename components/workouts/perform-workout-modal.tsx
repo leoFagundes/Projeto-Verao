@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
 import { createSession } from "@/lib/firebase/sessions";
 import { useSessions } from "@/lib/hooks/use-sessions";
@@ -69,6 +70,7 @@ export function PerformWorkoutModal({
   const [timerEnabled, setTimerEnabled] = useState(true);
   const [resting, setResting] = useState<{ key: number; seconds: number } | null>(null);
   const restKeyRef = useRef(0);
+  const [viewingImagesFor, setViewingImagesFor] = useState<string | null>(null);
 
   useEffect(() => {
     // Browser-only preference, can't be read during render (SSR has no
@@ -237,39 +239,59 @@ export function PerformWorkoutModal({
             const expanded = expandedId === log.id;
             const complete = isComplete(log);
             const doneCount = log.sets.filter((set) => set.done).length;
+            const source = workout.exercises.find((exercise) => exercise.id === log.id);
 
             return (
               <div
                 key={log.id}
                 className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]"
               >
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(log.id)}
-                  className="flex w-full items-center gap-3 p-3 text-left"
-                >
-                  <span
-                    className={cn(
-                      "text-xs text-slate-500 transition-transform",
-                      expanded ? "rotate-90" : "",
-                    )}
+                <div className="flex w-full items-center gap-3 p-3">
+                  {source && source.images.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewingImagesFor(log.id);
+                      }}
+                      className="shrink-0"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={source.images[0]}
+                        alt={log.name}
+                        className="h-11 w-11 rounded-xl object-cover"
+                      />
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(log.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
-                    ▸
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white">{log.name}</p>
-                    {log.muscleGroup ? <p className="text-xs text-slate-400">{log.muscleGroup}</p> : null}
-                  </div>
-                  {complete ? (
-                    <span className="shrink-0 rounded-full border border-[var(--accent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
-                      Concluído
+                    <span
+                      className={cn(
+                        "shrink-0 text-xs text-slate-500 transition-transform",
+                        expanded ? "rotate-90" : "",
+                      )}
+                    >
+                      ▸
                     </span>
-                  ) : (
-                    <span className="shrink-0 text-xs text-slate-400">
-                      {doneCount}/{log.sets.length} séries
-                    </span>
-                  )}
-                </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">{log.name}</p>
+                      {log.muscleGroup ? <p className="text-xs text-slate-400">{log.muscleGroup}</p> : null}
+                    </div>
+                    {complete ? (
+                      <span className="shrink-0 rounded-full border border-[var(--accent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+                        Concluído
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs text-slate-400">
+                        {doneCount}/{log.sets.length} séries
+                      </span>
+                    )}
+                  </button>
+                </div>
 
                 <AnimatePresence initial={false}>
                   {expanded ? (
@@ -281,6 +303,16 @@ export function PerformWorkoutModal({
                       className="overflow-hidden"
                     >
                       <div className="space-y-2 px-3 pb-3">
+                        {source?.videoUrl ? (
+                          <a
+                            href={source.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block text-xs text-[var(--accent)] hover:underline"
+                          >
+                            ▶ Ver vídeo de como fazer
+                          </a>
+                        ) : null}
                         <div className="grid grid-cols-[1.4rem_1fr_1fr_1.5rem_1.25rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
                           <span>Série</span>
                           <span>Reps</span>
@@ -356,6 +388,12 @@ export function PerformWorkoutModal({
           {submitting ? "Salvando..." : "Concluir treino"}
         </Button>
       </form>
+
+      <ImageLightbox
+        images={workout.exercises.find((exercise) => exercise.id === viewingImagesFor)?.images ?? []}
+        open={viewingImagesFor !== null}
+        onClose={() => setViewingImagesFor(null)}
+      />
     </Modal>
   );
 }
