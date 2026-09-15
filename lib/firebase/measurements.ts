@@ -3,7 +3,7 @@ import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateD
 import type { BodyMeasurement, BodyMeasurementInput } from "@/types/measurement";
 
 import { db } from "./client";
-import { deleteImageIfOwned } from "./storage";
+import { deleteImagesIfOwned } from "./storage";
 
 function requireDb() {
   if (!db) {
@@ -30,10 +30,17 @@ export function subscribeMeasurements(
     q,
     (snapshot) => {
       onData(
-        snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<BodyMeasurement, "id">),
-        })),
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Omit<BodyMeasurement, "id" | "photos"> & {
+            photos?: string[];
+            photoUrl?: string | null;
+          };
+          return {
+            id: docSnap.id,
+            ...data,
+            photos: data.photos ?? (data.photoUrl ? [data.photoUrl] : []),
+          };
+        }),
       );
     },
     (error) => onError?.(error),
@@ -52,18 +59,17 @@ export async function updateMeasurement(
   profileId: string,
   measurementId: string,
   input: BodyMeasurementInput,
-  previousPhotoUrl?: string | null,
+  previousPhotos: string[] = [],
 ) {
   await updateDoc(doc(requireDb(), "profiles", profileId, "measurements", measurementId), {
     ...input,
   });
 
-  if (input.photoUrl !== previousPhotoUrl) {
-    await deleteImageIfOwned(previousPhotoUrl);
-  }
+  const removed = previousPhotos.filter((url) => !input.photos.includes(url));
+  await deleteImagesIfOwned(removed);
 }
 
 export async function deleteMeasurement(profileId: string, measurement: BodyMeasurement) {
   await deleteDoc(doc(requireDb(), "profiles", profileId, "measurements", measurement.id));
-  await deleteImageIfOwned(measurement.photoUrl);
+  await deleteImagesIfOwned(measurement.photos);
 }

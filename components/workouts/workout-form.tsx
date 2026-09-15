@@ -4,11 +4,11 @@ import { Reorder } from "framer-motion";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { generateId } from "@/lib/utils";
 import type { ExerciseDef } from "@/types/exercise";
-import type { WorkoutInput } from "@/types/workout";
+import { MUSCLE_GROUPS, type MuscleGroup, type WorkoutInput } from "@/types/workout";
 
 import { ExercisePicker } from "./exercise-picker";
 import { ExerciseRow, type FormExercise } from "./exercise-row";
@@ -42,6 +42,7 @@ export function WorkoutForm({
   onCancel?: () => void;
 }) {
   const [name, setName] = useState(initialValues?.name ?? "");
+  const [category, setCategory] = useState<MuscleGroup | "">(initialValues?.category ?? "");
   const [exercises, setExercises] = useState<FormExercise[]>(
     () =>
       initialValues?.exercises.map((exercise) => ({
@@ -70,6 +71,7 @@ export function WorkoutForm({
     try {
       await onSubmit({
         name: name.trim(),
+        category: category || null,
         exercises: exercises.map(({ id, ...rest }) => ({ ...rest, id })),
       });
     } finally {
@@ -86,6 +88,17 @@ export function WorkoutForm({
           placeholder="Ex.: Treino A — Peito e Tríceps"
           required
         />
+      </Field>
+
+      <Field label="Categoria (define o ícone do card)">
+        <Select value={category} onChange={(event) => setCategory(event.target.value as MuscleGroup | "")}>
+          <option value="">Sem categoria</option>
+          {MUSCLE_GROUPS.map((group) => (
+            <option key={group} value={group}>
+              {group}
+            </option>
+          ))}
+        </Select>
       </Field>
 
       <div>

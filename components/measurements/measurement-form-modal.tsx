@@ -5,8 +5,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
-import { ImageUpload } from "@/components/ui/image-upload";
 import { Modal } from "@/components/ui/modal";
+import { MultiImageUpload } from "@/components/ui/multi-image-upload";
 import { createMeasurement, updateMeasurement } from "@/lib/firebase/measurements";
 import { formatDateInput, parseDateInput } from "@/lib/utils";
 import type { BodyMeasurement, BodyMeasurementInput } from "@/types/measurement";
@@ -37,7 +37,7 @@ export function MeasurementFormModal({
   const [boneMassKg, setBoneMassKg] = useState(measurement?.boneMassKg?.toString() ?? "");
   const [visceralFat, setVisceralFat] = useState(measurement?.visceralFat?.toString() ?? "");
   const [bmrKcal, setBmrKcal] = useState(measurement?.bmrKcal?.toString() ?? "");
-  const [photoUrl, setPhotoUrl] = useState<string | null>(measurement?.photoUrl ?? null);
+  const [photos, setPhotos] = useState<string[]>(measurement?.photos ?? []);
   const [note, setNote] = useState(measurement?.note ?? "");
   const [showMore, setShowMore] = useState(
     Boolean(
@@ -55,7 +55,7 @@ export function MeasurementFormModal({
   const hasAnyValue =
     [weightKg, heightCm, bodyFatPct, muscleMassPct, waterPct, boneMassKg, visceralFat, bmrKcal].some(
       (value) => value.trim() !== "",
-    ) || photoUrl != null;
+    ) || photos.length > 0;
 
   function resetForm() {
     setWeightKg("");
@@ -66,7 +66,7 @@ export function MeasurementFormModal({
     setBoneMassKg("");
     setVisceralFat("");
     setBmrKcal("");
-    setPhotoUrl(null);
+    setPhotos([]);
     setNote("");
     setShowMore(false);
   }
@@ -87,12 +87,12 @@ export function MeasurementFormModal({
         boneMassKg: numOrNull(boneMassKg),
         visceralFat: numOrNull(visceralFat),
         bmrKcal: numOrNull(bmrKcal),
-        photoUrl,
+        photos,
         note: note.trim(),
       };
 
       if (isEdit && measurement) {
-        await updateMeasurement(profileId, measurement.id, input, measurement.photoUrl);
+        await updateMeasurement(profileId, measurement.id, input, measurement.photos);
         toast.success("Medidas atualizadas!");
       } else {
         await createMeasurement(profileId, input);
@@ -114,10 +114,10 @@ export function MeasurementFormModal({
           <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
         </Field>
 
-        <ImageUpload
-          label="Foto de progresso (opcional)"
-          value={photoUrl}
-          onChange={setPhotoUrl}
+        <MultiImageUpload
+          label="Fotos de progresso (opcional, pode adicionar mais de uma)"
+          values={photos}
+          onChange={setPhotos}
           folder="progress-photos"
         />
 

@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Projeto Verão",
   description: "App pessoal de treino: perfis, treinos, corridas e estatísticas de evolução.",
+  appleWebApp: {
+    title: "Projeto Verão",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

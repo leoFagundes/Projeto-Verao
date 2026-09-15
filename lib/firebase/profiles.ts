@@ -75,9 +75,10 @@ export async function deleteProfile(profile: Profile) {
   const id = profile.id;
 
   const measurementsSnapshot = await getDocs(collection(database, "profiles", id, "measurements"));
-  const measurementPhotos = measurementsSnapshot.docs.map(
-    (docSnap) => (docSnap.data() as BodyMeasurement).photoUrl,
-  );
+  const measurementPhotos = measurementsSnapshot.docs.flatMap((docSnap) => {
+    const data = docSnap.data() as Partial<BodyMeasurement> & { photoUrl?: string | null };
+    return data.photos ?? (data.photoUrl ? [data.photoUrl] : []);
+  });
 
   const subcollections = ["workouts", "sessions", "runs", "measurements"];
   await Promise.all(

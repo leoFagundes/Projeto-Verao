@@ -9,7 +9,7 @@ export type BodyMeasurement = {
   boneMassKg: number | null;
   visceralFat: number | null;
   bmrKcal: number | null;
-  photoUrl: string | null;
+  photos: string[];
   note: string;
   createdAt: number;
 };
@@ -24,7 +24,7 @@ export type BodyMeasurementInput = {
   boneMassKg: number | null;
   visceralFat: number | null;
   bmrKcal: number | null;
-  photoUrl: string | null;
+  photos: string[];
   note: string;
 };
 

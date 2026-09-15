@@ -86,7 +86,7 @@ export default function WorkoutDetailPage() {
         <h2 className="mt-2 text-2xl font-semibold text-white">{workout.name}</h2>
         <Card className="mt-6 p-5 sm:p-6">
           <WorkoutForm
-            initialValues={{ name: workout.name, exercises: workout.exercises }}
+            initialValues={{ name: workout.name, category: workout.category, exercises: workout.exercises }}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdate}
             onCancel={() => setEditing(false)}

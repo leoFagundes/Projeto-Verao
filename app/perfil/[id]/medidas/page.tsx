@@ -6,12 +6,13 @@ import { toast } from "sonner";
 
 import { MeasurementChart } from "@/components/charts/measurement-chart";
 import { MeasurementCard } from "@/components/measurements/measurement-card";
+import { MeasurementCompareModal } from "@/components/measurements/measurement-compare-modal";
 import { MeasurementFormModal } from "@/components/measurements/measurement-form-modal";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Modal } from "@/components/ui/modal";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { StatTile } from "@/components/ui/stat-tile";
 import { deleteMeasurement } from "@/lib/firebase/measurements";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
@@ -27,15 +28,28 @@ export default function MeasurementsPage() {
   const [editing, setEditing] = useState<BodyMeasurement | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BodyMeasurement | null>(null);
   const [selectedField, setSelectedField] = useState<MeasurementFieldKey>("weightKg");
-  const [viewingPhoto, setViewingPhoto] = useState<BodyMeasurement | null>(null);
+  const [viewingPhotosFor, setViewingPhotosFor] = useState<BodyMeasurement | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
-  const photos = useMemo(
-    () =>
-      [...measurements]
-        .filter((m): m is BodyMeasurement & { photoUrl: string } => m.photoUrl != null)
-        .sort((a, b) => a.date - b.date),
+  const entriesWithPhotos = useMemo(
+    () => [...measurements].filter((m) => m.photos.length > 0).sort((a, b) => a.date - b.date),
     [measurements],
   );
+
+  function toggleCompareMode() {
+    setCompareMode((current) => !current);
+    setSelectedIds([]);
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }
+
+  const selectedMeasurements = measurements.filter((m) => selectedIds.includes(m.id));
 
   const availableFields = useMemo(
     () => MEASUREMENT_FIELDS.filter((field) => measurements.some((m) => m[field.key] != null)),
@@ -63,8 +77,26 @@ export default function MeasurementsPage() {
           <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Medidas</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Suas medidas corporais</h2>
         </div>
-        <Button onClick={() => setFormOpen(true)}>+ Registrar</Button>
+        <div className="flex shrink-0 gap-2">
+          {measurements.length >= 2 ? (
+            <Button variant="secondary" onClick={toggleCompareMode}>
+              {compareMode ? "Cancelar" : "Comparar"}
+            </Button>
+          ) : null}
+          <Button onClick={() => setFormOpen(true)}>+ Registrar</Button>
+        </div>
       </div>
+
+      {compareMode ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-2.5">
+          <p className="text-xs text-slate-200">
+            {selectedIds.length} selecionada{selectedIds.length === 1 ? "" : "s"}
+          </p>
+          <Button size="sm" disabled={selectedIds.length === 0} onClick={() => setCompareOpen(true)}>
+            Comparar
+          </Button>
+        </div>
+      ) : null}
 
       {measurements.length > 0 ? (
         <>
@@ -134,26 +166,31 @@ export default function MeasurementsPage() {
             </div>
           </Card>
 
-          {photos.length > 0 ? (
+          {entriesWithPhotos.length > 0 ? (
             <Card className="p-5">
               <SectionLabel>Fotos de progresso</SectionLabel>
               <h3 className="mt-1 text-lg font-semibold text-white">Linha do tempo</h3>
               <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                {photos.map((photo) => (
+                {entriesWithPhotos.map((entry) => (
                   <button
-                    key={photo.id}
+                    key={entry.id}
                     type="button"
-                    onClick={() => setViewingPhoto(photo)}
-                    className="shrink-0 text-left"
+                    onClick={() => setViewingPhotosFor(entry)}
+                    className="relative shrink-0 text-left"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={photo.photoUrl}
-                      alt={`Foto de progresso — ${formatDateLong(photo.date)}`}
+                      src={entry.photos[0]}
+                      alt={`Foto de progresso — ${formatDateLong(entry.date)}`}
                       className="h-28 w-24 rounded-2xl border border-[var(--border)] object-cover transition hover:border-[var(--accent)]"
                     />
+                    {entry.photos.length > 1 ? (
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                        +{entry.photos.length - 1}
+                      </span>
+                    ) : null}
                     <p className="mt-1 text-center text-[11px] text-slate-400">
-                      {formatDateLong(photo.date).split(" de ").slice(0, 2).join(" ")}
+                      {formatDateLong(entry.date).split(" de ").slice(0, 2).join(" ")}
                     </p>
                   </button>
                 ))}
@@ -185,6 +222,9 @@ export default function MeasurementsPage() {
                 index={index}
                 onEdit={() => setEditing(measurement)}
                 onDelete={() => setPendingDelete(measurement)}
+                selectable={compareMode}
+                selected={selectedIds.includes(measurement.id)}
+                onToggleSelect={() => toggleSelected(measurement.id)}
               />
             ))}
           </div>
@@ -200,20 +240,17 @@ export default function MeasurementsPage() {
         measurement={editing}
       />
 
-      <Modal
-        open={viewingPhoto !== null}
-        onClose={() => setViewingPhoto(null)}
-        title={viewingPhoto ? formatDateLong(viewingPhoto.date) : "Foto"}
-      >
-        {viewingPhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={viewingPhoto.photoUrl ?? undefined}
-            alt={`Foto de progresso — ${formatDateLong(viewingPhoto.date)}`}
-            className="w-full rounded-2xl object-cover"
-          />
-        ) : null}
-      </Modal>
+      <ImageLightbox
+        images={viewingPhotosFor?.photos ?? []}
+        open={viewingPhotosFor !== null}
+        onClose={() => setViewingPhotosFor(null)}
+      />
+
+      <MeasurementCompareModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        measurements={selectedMeasurements}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

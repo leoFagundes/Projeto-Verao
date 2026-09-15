@@ -65,6 +65,7 @@ export function subscribeWorkouts(
           return {
             id: docSnap.id,
             ...data,
+            category: data.category ?? null,
             exercises: data.exercises.map(normalizeStoredExercise),
           };
         }),
@@ -88,6 +89,7 @@ export async function createWorkout(profileId: string, input: WorkoutInput) {
   const now = Date.now();
   const docRef = await addDoc(workoutsRef(profileId), {
     name: input.name,
+    category: input.category,
     exercises: normalizeExercises(input.exercises),
     createdAt: now,
     updatedAt: now,
@@ -103,6 +105,7 @@ export async function updateWorkout(
 ) {
   await updateDoc(doc(requireDb(), "profiles", profileId, "workouts", workoutId), {
     name: input.name,
+    category: input.category,
     exercises: normalizeExercises(input.exercises),
     updatedAt: Date.now(),
   });
@@ -138,6 +141,7 @@ export async function copyWorkout(
   const sameProfile = sourceProfileId === targetProfileId;
   return createWorkout(targetProfileId, {
     name: sameProfile ? `${workout.name} (cópia)` : workout.name,
+    category: workout.category,
     exercises: workout.exercises,
   });
 }

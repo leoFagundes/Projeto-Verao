@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { WorkoutCard } from "@/components/workouts/workout-card";
@@ -18,6 +18,10 @@ import { formatDateLong } from "@/lib/utils";
 export default function WorkoutsPage() {
   const params = useParams<{ id: string }>();
   const { workouts, loading } = useWorkouts(params.id);
+  const sortedWorkouts = useMemo(
+    () => [...workouts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    [workouts],
+  );
   const { activeSessions } = useActiveSessions(params.id);
   const [continuingWorkoutId, setContinuingWorkoutId] = useState<string | null>(null);
   const [discardingWorkoutId, setDiscardingWorkoutId] = useState<string | null>(null);
@@ -100,7 +104,7 @@ export default function WorkoutsPage() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {workouts.map((workout, index) => (
+          {sortedWorkouts.map((workout, index) => (
             <WorkoutCard key={workout.id} workout={workout} profileId={params.id} index={index} />
           ))}
         </div>

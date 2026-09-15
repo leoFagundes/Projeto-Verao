@@ -33,6 +33,8 @@ export type ExerciseInput = Omit<Exercise, "id"> & { id?: string };
 export type Workout = {
   id: string;
   name: string;
+  /** Used only to pick which icon represents the workout — no other effect. */
+  category: MuscleGroup | null;
   exercises: Exercise[];
   createdAt: number;
   updatedAt: number;
@@ -41,5 +43,6 @@ export type Workout = {
 
 export type WorkoutInput = {
   name: string;
+  category: MuscleGroup | null;
   exercises: ExerciseInput[];
 };

@@ -6,7 +6,12 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import type { Workout } from "@/types/workout";
 
+import { CategoryIcon } from "./category-icons";
+
 export function WorkoutCard({ workout, profileId, index }: { workout: Workout; profileId: string; index: number }) {
+  const activeCount = workout.exercises.filter((exercise) => !exercise.hidden).length;
+  const hiddenCount = workout.exercises.length - activeCount;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -21,14 +26,12 @@ export function WorkoutCard({ workout, profileId, index }: { workout: Workout; p
           <div className="min-w-0">
             <h3 className="break-words text-lg font-semibold text-white">{workout.name}</h3>
             <p className="mt-1 text-sm text-slate-400">
-              {workout.exercises.length} exercício{workout.exercises.length === 1 ? "" : "s"}
+              {activeCount} ativo{activeCount === 1 ? "" : "s"}
+              {hiddenCount > 0 ? ` · ${hiddenCount} oculto${hiddenCount === 1 ? "" : "s"}` : ""}
             </p>
           </div>
-          <div
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-lg text-slate-950"
-            style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
-          >
-            🏋️
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
+            <CategoryIcon category={workout.category} className="h-6 w-6" />
           </div>
         </div>
 
