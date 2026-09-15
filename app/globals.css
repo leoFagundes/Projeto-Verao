@@ -1,26 +1,90 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  /* Neutral chrome — same for every theme. Only --accent* changes below. */
+  --bg: #050506;
+  --surface: #131418;
+  --surface-2: #1e1f26;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --field-bg: #0b0c0f;
+
+  --accent: #818cf8;
+  --accent-2: #38bdf8;
+  --accent-rgb: 129, 140, 248;
+  --accent-soft: rgba(129, 140, 248, 0.14);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="padrao"] {
+  --accent: #818cf8;
+  --accent-2: #38bdf8;
+  --accent-rgb: 129, 140, 248;
+  --accent-soft: rgba(129, 140, 248, 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="verde"] {
+  --accent: #34d399;
+  --accent-2: #a3e635;
+  --accent-rgb: 52, 211, 153;
+  --accent-soft: rgba(52, 211, 153, 0.14);
+}
+
+[data-theme="rosa"] {
+  --accent: #f472b6;
+  --accent-2: #fb7185;
+  --accent-rgb: 244, 114, 182;
+  --accent-soft: rgba(244, 114, 182, 0.14);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: #f8fafc;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
