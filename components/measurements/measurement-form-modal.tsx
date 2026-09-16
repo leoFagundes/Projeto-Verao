@@ -3,11 +3,16 @@
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
+import { AchievementUnlockModal } from "@/components/achievements/achievement-unlock-modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { MultiImageUpload } from "@/components/ui/multi-image-upload";
+import { type Achievement, detectNewlyUnlocked } from "@/lib/achievements";
 import { createMeasurement, updateMeasurement } from "@/lib/firebase/measurements";
+import { useMeasurements } from "@/lib/hooks/use-measurements";
+import { useRuns } from "@/lib/hooks/use-runs";
+import { useSessions } from "@/lib/hooks/use-sessions";
 import { formatDateInput, parseDateInput } from "@/lib/utils";
 import type { BodyMeasurement, BodyMeasurementInput } from "@/types/measurement";
 
@@ -27,6 +32,10 @@ export function MeasurementFormModal({
   measurement?: BodyMeasurement | null;
 }) {
   const isEdit = Boolean(measurement);
+  const { sessions } = useSessions(profileId);
+  const { runs } = useRuns(profileId);
+  const { measurements } = useMeasurements(profileId);
+  const [celebrating, setCelebrating] = useState<Achievement[]>([]);
 
   const [date, setDate] = useState(() => formatDateInput(measurement?.date ?? Date.now()));
   const [weightKg, setWeightKg] = useState(measurement?.weightKg?.toString() ?? "");
@@ -94,12 +103,24 @@ export function MeasurementFormModal({
       if (isEdit && measurement) {
         await updateMeasurement(profileId, measurement.id, input, measurement.photos);
         toast.success("Medidas atualizadas!");
+        onClose();
       } else {
+        const measurementInput: BodyMeasurement = { id: "pending", ...input, createdAt: Date.now() };
+        const newlyUnlocked = detectNewlyUnlocked(
+          { sessions, runs, measurements },
+          { sessions, runs, measurements: [...measurements, measurementInput] },
+        );
+
         await createMeasurement(profileId, input);
         toast.success("Medidas registradas!");
         resetForm();
+
+        if (newlyUnlocked.length > 0) {
+          setCelebrating(newlyUnlocked);
+        } else {
+          onClose();
+        }
       }
-      onClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
     } finally {
@@ -233,6 +254,15 @@ export function MeasurementFormModal({
           {submitting ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar medidas"}
         </Button>
       </form>
+
+      <AchievementUnlockModal
+        achievements={celebrating}
+        open={celebrating.length > 0}
+        onClose={() => {
+          setCelebrating([]);
+          onClose();
+        }}
+      />
     </Modal>
   );
 }

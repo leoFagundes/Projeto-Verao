@@ -192,6 +192,11 @@ export default function WorkoutDetailPage() {
                       {exercise.weight ? ` · alvo ${exercise.weight}kg` : ""}
                       {exercise.restSeconds ? ` · ${exercise.restSeconds}s descanso` : ""}
                     </p>
+                    {exercise.linkedToNext ? (
+                      <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+                        🔗 Superserie com o próximo
+                      </p>
+                    ) : null}
                     {exercise.videoUrl ? (
                       <button
                         type="button"

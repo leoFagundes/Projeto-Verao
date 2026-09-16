@@ -1,6 +1,6 @@
 import type { WorkoutSession } from "@/types/session";
 import type { Run } from "@/types/run";
-import type { BodyMeasurement, MeasurementFieldKey } from "@/types/measurement";
+import type { BodyMeasurement, MeasurementFieldKey, MeasurementGoal } from "@/types/measurement";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -30,6 +30,29 @@ export function computeStreak(sessions: WorkoutSession[], runs: Run[]) {
   }
 
   return streak;
+}
+
+/** Longest-ever run of consecutive active days, anywhere in history — unlike
+ * `computeStreak` (which only counts the streak ending today), this never
+ * drops once earned, so it's safe to use for a permanent achievement. */
+export function bestStreak(sessions: WorkoutSession[], runs: Run[]) {
+  const activityDays = new Set<number>();
+  for (const session of sessions) activityDays.add(startOfDay(session.date));
+  for (const run of runs) activityDays.add(startOfDay(run.date));
+  if (activityDays.size === 0) return 0;
+
+  const sortedDays = Array.from(activityDays).sort((a, b) => a - b);
+  let best = 1;
+  let current = 1;
+  for (let i = 1; i < sortedDays.length; i++) {
+    if (sortedDays[i] - sortedDays[i - 1] === DAY_MS) {
+      current += 1;
+      best = Math.max(best, current);
+    } else {
+      current = 1;
+    }
+  }
+  return best;
 }
 
 export function weeklyVolume(sessions: WorkoutSession[], weeks = 8) {
@@ -130,8 +153,41 @@ export function detectNewRecords(
   return records;
 }
 
+/**
+ * Date of every time, across all of history, an exercise's top set beat the
+ * best logged before it — i.e. every moment a 🏆 record toast would have
+ * fired. Replays sessions oldest-first so it matches `detectNewRecords`.
+ */
+export function recordDates(sessions: WorkoutSession[]): number[] {
+  const sorted = [...sessions].sort((a, b) => a.date - b.date);
+  const bestSoFar = new Map<string, number>();
+  const dates: number[] = [];
+
+  for (const session of sorted) {
+    for (const log of session.exercises) {
+      const top = topSetWeight(log);
+      if (top == null) continue;
+      const previousBest = bestSoFar.get(log.exerciseId);
+      if (previousBest != null && top > previousBest) dates.push(session.date);
+      bestSoFar.set(log.exerciseId, Math.max(previousBest ?? -Infinity, top));
+    }
+  }
+
+  return dates;
+}
+
+export function totalRecordCount(sessions: WorkoutSession[]) {
+  return recordDates(sessions).length;
+}
+
 export function totalDistance(runs: Run[]) {
   return runs.reduce((sum, run) => sum + run.distanceKm, 0);
+}
+
+/** Longest distance covered in a single run — distinct from the cumulative total. */
+export function longestSingleRun(runs: Run[]) {
+  if (runs.length === 0) return 0;
+  return Math.max(...runs.map((run) => run.distanceKm));
 }
 
 export function averagePace(runs: Run[]) {
@@ -163,6 +219,19 @@ export function measurementTrend(measurements: BodyMeasurement[], field: Measure
   const previous = series[series.length - 2] ?? null;
   const delta = latest && previous ? Number((latest.value - previous.value).toFixed(1)) : null;
   return { latest, delta };
+}
+
+/**
+ * 0-100 progress toward a measurement goal. Works whether the goal means
+ * growing (target > start) or shrinking (target < start) — direction falls
+ * out of the sign of the two differences.
+ */
+export function goalProgress(goal: MeasurementGoal, currentValue: number | null) {
+  if (currentValue == null) return null;
+  const { startValue, targetValue } = goal;
+  if (startValue === targetValue) return 100;
+  const raw = ((currentValue - startValue) / (targetValue - startValue)) * 100;
+  return Math.max(0, Math.min(100, raw));
 }
 
 /** Body Mass Index from the most recent entry that has both weight and height. */
@@ -209,6 +278,45 @@ export function activityHeatmap(sessions: WorkoutSession[], runs: Run[], weeks =
     gridWeeks.push(days.slice(i, i + 7));
   }
   return gridWeeks;
+}
+
+export type CalendarDay = { date: number; inMonth: boolean; sessionCount: number; runCount: number };
+
+/** Full weeks (Monday-first) spanning the month that `monthAnchor` falls in. */
+export function monthCalendar(sessions: WorkoutSession[], runs: Run[], monthAnchor: number): CalendarDay[] {
+  const anchor = new Date(monthAnchor);
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+
+  const firstOfMonth = startOfDay(new Date(year, month, 1).getTime());
+  const firstWeekday = (new Date(firstOfMonth).getDay() + 6) % 7;
+  const gridStart = firstOfMonth - firstWeekday * DAY_MS;
+
+  const lastOfMonth = startOfDay(new Date(year, month + 1, 0).getTime());
+  const lastWeekday = (new Date(lastOfMonth).getDay() + 6) % 7;
+  const gridEnd = lastOfMonth + (6 - lastWeekday) * DAY_MS;
+
+  const sessionCounts = new Map<number, number>();
+  for (const session of sessions) {
+    const day = startOfDay(session.date);
+    sessionCounts.set(day, (sessionCounts.get(day) ?? 0) + 1);
+  }
+  const runCounts = new Map<number, number>();
+  for (const run of runs) {
+    const day = startOfDay(run.date);
+    runCounts.set(day, (runCounts.get(day) ?? 0) + 1);
+  }
+
+  const days: CalendarDay[] = [];
+  for (let cursor = gridStart; cursor <= gridEnd; cursor += DAY_MS) {
+    days.push({
+      date: cursor,
+      inMonth: new Date(cursor).getMonth() === month,
+      sessionCount: sessionCounts.get(cursor) ?? 0,
+      runCount: runCounts.get(cursor) ?? 0,
+    });
+  }
+  return days;
 }
 
 export function recentActivity(sessions: WorkoutSession[], runs: Run[], limit = 5) {

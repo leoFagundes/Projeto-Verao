@@ -13,6 +13,14 @@ export function formatDate(timestamp: number) {
   });
 }
 
+export function formatDateWithYear(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export function formatDateLong(timestamp: number) {
   return new Date(timestamp).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -38,6 +46,16 @@ export function formatPace(secPerKm: number) {
   const minutes = Math.floor(secPerKm / 60);
   const seconds = Math.round(secPerKm % 60);
   return `${minutes}:${seconds.toString().padStart(2, "0")}/km`;
+}
+
+export function startOfMonth(timestamp: number) {
+  const d = new Date(timestamp);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
+export function addMonths(timestamp: number, delta: number) {
+  const d = new Date(timestamp);
+  return new Date(d.getFullYear(), d.getMonth() + delta, 1).getTime();
 }
 
 export function formatDuration(minutes: number) {

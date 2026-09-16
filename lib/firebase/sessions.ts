@@ -1,6 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query } from "firebase/firestore";
 
-import type { WorkoutSession, WorkoutSessionInput } from "@/types/session";
+import type { SessionExerciseLog, WorkoutSession, WorkoutSessionInput } from "@/types/session";
 
 import { db } from "./client";
 import { touchWorkoutPerformed } from "./workouts";
@@ -30,10 +30,16 @@ export function subscribeSessions(
     q,
     (snapshot) => {
       onData(
-        snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<WorkoutSession, "id">),
-        })),
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Omit<WorkoutSession, "id" | "exercises"> & {
+            exercises: (Omit<SessionExerciseLog, "notes"> & { notes?: string })[];
+          };
+          return {
+            id: docSnap.id,
+            ...data,
+            exercises: data.exercises.map((exercise) => ({ ...exercise, notes: exercise.notes ?? "" })),
+          };
+        }),
       );
     },
     (error) => onError?.(error),

@@ -1,12 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Dumbbell } from "lucide-react";
 import Link from "next/link";
 
 import { formatDate } from "@/lib/utils";
 import type { Workout } from "@/types/workout";
-
-import { CategoryIcon } from "./category-icons";
 
 export function WorkoutCard({ workout, profileId, index }: { workout: Workout; profileId: string; index: number }) {
   const activeCount = workout.exercises.filter((exercise) => !exercise.hidden).length;
@@ -31,7 +30,7 @@ export function WorkoutCard({ workout, profileId, index }: { workout: Workout; p
             </p>
           </div>
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
-            <CategoryIcon category={workout.category} className="h-6 w-6" />
+            <Dumbbell className="h-6 w-6" />
           </div>
         </div>
 

@@ -26,6 +26,8 @@ export type Exercise = {
   videoUrl: string | null;
   notes: string;
   hidden: boolean;
+  /** True when this exercise and the next one are performed back-to-back as a superset/circuit, no rest between them. */
+  linkedToNext: boolean;
 };
 
 export type ExerciseInput = Omit<Exercise, "id"> & { id?: string };

@@ -39,3 +39,18 @@ export const MEASUREMENT_FIELDS = [
 ] as const satisfies readonly { key: keyof BodyMeasurementInput; label: string; unit: string }[];
 
 export type MeasurementFieldKey = (typeof MEASUREMENT_FIELDS)[number]["key"];
+
+/** One active goal per field — direction (grow/shrink) is inferred from target vs. start. */
+export type MeasurementGoal = {
+  id: string;
+  field: MeasurementFieldKey;
+  targetValue: number;
+  startValue: number;
+  createdAt: number;
+};
+
+export type MeasurementGoalInput = {
+  field: MeasurementFieldKey;
+  targetValue: number;
+  startValue: number;
+};

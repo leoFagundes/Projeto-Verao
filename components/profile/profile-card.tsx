@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Lock } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -29,9 +30,14 @@ export function ProfileCard({ profile, index }: { profile: Profile; index: numbe
             textClassName="text-6xl"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent" />
-          <div className="absolute left-3 top-3 rounded-full bg-slate-950/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-200">
-            {theme.label}
-          </div>
+          {profile.password ? (
+            <div
+              className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-slate-950/60 text-slate-200"
+              aria-label="Perfil protegido por senha"
+            >
+              <Lock className="h-3.5 w-3.5" />
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">

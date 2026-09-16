@@ -4,15 +4,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { AchievementUnlockModal } from "@/components/achievements/achievement-unlock-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
+import { type Achievement, detectNewlyUnlocked } from "@/lib/achievements";
 import { deleteActiveSession, saveActiveSession } from "@/lib/firebase/active-sessions";
 import { createSession } from "@/lib/firebase/sessions";
 import { useActiveSessions } from "@/lib/hooks/use-active-sessions";
+import { useMeasurements } from "@/lib/hooks/use-measurements";
+import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { detectNewRecords, lastWeightForExercise } from "@/lib/stats";
 import { cn, formatDateInput, parseDateInput } from "@/lib/utils";
@@ -44,6 +48,7 @@ function buildInitialLogs(workout: Workout, sessions: WorkoutSession[]): Session
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
       sets,
+      notes: "",
     };
   });
 }
@@ -72,6 +77,8 @@ export function PerformWorkoutModal({
   profileId: string;
 }) {
   const { sessions } = useSessions(profileId);
+  const { runs } = useRuns(profileId);
+  const { measurements } = useMeasurements(profileId);
   const { activeSessions } = useActiveSessions(profileId);
   const draft = activeSessions.find((item) => item.workoutId === workout.id) ?? null;
 
@@ -87,8 +94,10 @@ export function PerformWorkoutModal({
   const [resting, setResting] = useState<{ key: number; seconds: number } | null>(null);
   const restKeyRef = useRef(0);
   const [viewingImagesFor, setViewingImagesFor] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState<Achievement[]>([]);
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [step, setStep] = useState<"exercises" | "summary">("exercises");
   const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
@@ -129,6 +138,7 @@ export function PerformWorkoutModal({
       setExpandedId(visibleExercises(workout)[0]?.id ?? null);
     }
     setResting(null);
+    setStep("exercises");
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-rolls on open, using latest workout/sessions/draft closures
   }, [open]);
@@ -166,13 +176,22 @@ export function PerformWorkoutModal({
     );
     setExerciseLogs(next);
 
+    const source = workout.exercises.find((exercise) => exercise.id === exerciseId);
     const updated = next.find((log) => log.id === exerciseId);
+
     if (updated && isComplete(updated)) {
-      setExpandedId((current) => (current === exerciseId ? null : current));
+      if (source?.linkedToNext) {
+        // Part of a superset — jump straight to the next exercise in the circuit.
+        const currentIndex = next.findIndex((log) => log.id === exerciseId);
+        setExpandedId(next[currentIndex + 1]?.id ?? null);
+      } else {
+        setExpandedId((current) => (current === exerciseId ? null : current));
+      }
     }
 
-    if (patch.done === true && timerEnabled) {
-      const restSeconds = workout.exercises.find((exercise) => exercise.id === exerciseId)?.restSeconds;
+    // Superset exercises share one rest period, taken only after the last one in the chain.
+    if (patch.done === true && timerEnabled && !source?.linkedToNext) {
+      const restSeconds = source?.restSeconds;
       if (restSeconds) {
         restKeyRef.current += 1;
         setResting({ key: restKeyRef.current, seconds: restSeconds });
@@ -203,6 +222,10 @@ export function PerformWorkoutModal({
     );
   }
 
+  function updateExerciseNote(exerciseId: string, notes: string) {
+    setExerciseLogs((current) => current.map((log) => (log.id === exerciseId ? { ...log, notes } : log)));
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (submitting) return;
@@ -210,6 +233,21 @@ export function PerformWorkoutModal({
     setSubmitting(true);
     try {
       const records = detectNewRecords(sessions, exerciseLogs);
+
+      const sessionInput: WorkoutSession = {
+        id: "pending",
+        workoutId: workout.id,
+        workoutName: workout.name,
+        date: parseDateInput(date),
+        durationMin,
+        note: note.trim(),
+        exercises: exerciseLogs,
+        createdAt: Date.now(),
+      };
+      const newlyUnlocked = detectNewlyUnlocked(
+        { sessions, runs, measurements },
+        { sessions: [...sessions, sessionInput], runs, measurements },
+      );
 
       await createSession(profileId, {
         workoutId: workout.id,
@@ -224,7 +262,11 @@ export function PerformWorkoutModal({
       for (const record of records) {
         toast.success(`🏆 Novo recorde: ${record.name} — ${record.weight}kg!`, { duration: 5000 });
       }
-      onClose();
+      if (newlyUnlocked.length > 0) {
+        setCelebrating(newlyUnlocked);
+      } else {
+        onClose();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
     } finally {
@@ -239,12 +281,15 @@ export function PerformWorkoutModal({
     setExerciseLogs(buildInitialLogs(workout, sessions));
     setExpandedId(visibleExercises(workout)[0]?.id ?? null);
     setResting(null);
+    setStep("exercises");
     startedAtRef.current = Date.now();
     deleteActiveSession(profileId, workout.id).catch(() => {});
     toast.success("Treino reiniciado.");
   }
 
   const progressInProgress = hasProgress(exerciseLogs, durationMin, note);
+  const totalSets = exerciseLogs.reduce((sum, log) => sum + log.sets.length, 0);
+  const doneSets = exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.done).length, 0);
 
   return (
     <Modal open={open} onClose={onClose} title={`Realizar: ${workout.name}`}>
@@ -272,20 +317,16 @@ export function PerformWorkoutModal({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Data">
-            <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-          </Field>
-          <Field label="Duração (min)">
-            <Input
-              type="number"
-              min={1}
-              value={durationMin}
-              onChange={(event) => setDurationMin(Number(event.target.value) || 0)}
-            />
-          </Field>
-        </div>
-
+        <AnimatePresence mode="wait" initial={false}>
+          {step === "exercises" ? (
+            <motion.div
+              key="exercises"
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-4"
+            >
         <button
           type="button"
           onClick={toggleTimerEnabled}
@@ -317,23 +358,45 @@ export function PerformWorkoutModal({
           ) : null}
         </AnimatePresence>
 
-        <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
           {exerciseLogs.length === 0 ? (
             <p className="text-sm text-slate-500">
               Todos os exercícios deste treino estão ocultos no momento.
             </p>
           ) : null}
-          {exerciseLogs.map((log) => {
+          {exerciseLogs.map((log, index) => {
             const expanded = expandedId === log.id;
             const complete = isComplete(log);
             const doneCount = log.sets.filter((set) => set.done).length;
             const source = workout.exercises.find((exercise) => exercise.id === log.id);
+            const prevSource =
+              index > 0 ? workout.exercises.find((exercise) => exercise.id === exerciseLogs[index - 1].id) : null;
+            const connectedToPrev = Boolean(prevSource?.linkedToNext);
+            const connectedToNext = Boolean(source?.linkedToNext);
 
             return (
               <div
                 key={log.id}
-                className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]"
+                className={cn(
+                  "overflow-hidden border",
+                  connectedToPrev ? "-mt-2" : "",
+                  connectedToPrev || connectedToNext
+                    ? "border-[var(--accent)]/40 bg-[var(--accent-soft)]"
+                    : "border-[var(--border)] bg-[var(--surface-2)]",
+                  connectedToPrev && connectedToNext
+                    ? "rounded-none"
+                    : connectedToNext
+                      ? "rounded-t-2xl rounded-b-none"
+                      : connectedToPrev
+                        ? "rounded-b-2xl rounded-t-none"
+                        : "rounded-2xl",
+                )}
               >
+                {connectedToPrev || connectedToNext ? (
+                  <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
+                    🔗 Superserie
+                  </p>
+                ) : null}
                 <div className="flex w-full items-center gap-3 p-3">
                   {source && source.images.length > 0 ? (
                     <button
@@ -468,6 +531,14 @@ export function PerformWorkoutModal({
                         >
                           + Adicionar série
                         </button>
+
+                        <Textarea
+                          value={log.notes}
+                          onChange={(event) => updateExerciseNote(log.id, event.target.value)}
+                          rows={2}
+                          placeholder="Nota deste exercício (opcional) — técnica, dor, ajuste do banco..."
+                          className="text-xs"
+                        />
                       </div>
                     </motion.div>
                   ) : null}
@@ -477,18 +548,63 @@ export function PerformWorkoutModal({
           })}
         </div>
 
-        <Field label="Nota (opcional)">
-          <Textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={2}
-            placeholder="Como foi o treino?"
-          />
-        </Field>
+              <Button type="button" className="w-full" onClick={() => setStep("summary")}>
+                Continuar
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="summary"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 12 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-4"
+            >
+              <button
+                type="button"
+                onClick={() => setStep("exercises")}
+                className="text-sm font-medium text-slate-300 hover:text-white"
+              >
+                ← Voltar aos exercícios
+              </button>
 
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Salvando..." : "Concluir treino"}
-        </Button>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-center">
+                <p className="text-2xl font-bold text-white">
+                  {doneSets}/{totalSets}
+                </p>
+                <p className="text-xs text-slate-400">séries concluídas</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Data">
+                  <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+                </Field>
+                <Field label="Duração (min)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={durationMin}
+                    onChange={(event) => setDurationMin(Number(event.target.value) || 0)}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Nota geral (opcional)">
+                <Textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  rows={2}
+                  placeholder="Como foi o treino?"
+                />
+              </Field>
+
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Salvando..." : "Concluir treino"}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
 
       <ImageLightbox
@@ -511,6 +627,15 @@ export function PerformWorkoutModal({
         danger
         onClose={() => setConfirmReset(false)}
         onConfirm={resetWorkout}
+      />
+
+      <AchievementUnlockModal
+        achievements={celebrating}
+        open={celebrating.length > 0}
+        onClose={() => {
+          setCelebrating([]);
+          onClose();
+        }}
       />
     </Modal>
   );

@@ -2,31 +2,52 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { AchievementGrid } from "@/components/achievements/achievement-grid";
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
 import { DistanceChart } from "@/components/charts/distance-chart";
+import { MonthCalendar } from "@/components/charts/month-calendar";
 import { MuscleDistributionChart } from "@/components/charts/muscle-distribution-chart";
 import { WeeklyVolumeChart } from "@/components/charts/weekly-volume-chart";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { StatTile } from "@/components/ui/stat-tile";
+import { ACHIEVEMENTS, unlockedAchievements } from "@/lib/achievements";
+import { useMeasurements } from "@/lib/hooks/use-measurements";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import {
   activityHeatmap,
+  type CalendarDay,
   computeStreak,
   distanceOverTime,
+  monthCalendar,
   muscleDistribution,
   recentActivity,
   totalDistance,
   weeklyVolume,
 } from "@/lib/stats";
-import { formatDate, formatPace } from "@/lib/utils";
+import { addMonths, formatDate, formatPace, startOfMonth } from "@/lib/utils";
 
 export default function ProfileOverviewPage() {
   const params = useParams<{ id: string }>();
   const { sessions, loading: sessionsLoading } = useSessions(params.id);
   const { runs, loading: runsLoading } = useRuns(params.id);
+  const { measurements } = useMeasurements(params.id);
+
+  const [monthAnchor, setMonthAnchor] = useState<number | null>(null);
+  const [todayTimestamp, setTodayTimestamp] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Today's real date can't be computed during render (impure) — an
+    // effect is the correct place for this one-time read.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const now = Date.now();
+    setMonthAnchor(startOfMonth(now));
+    setTodayTimestamp(new Date(now).setHours(0, 0, 0, 0));
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   const streak = useMemo(() => computeStreak(sessions, runs), [sessions, runs]);
   const volume = useMemo(() => weeklyVolume(sessions), [sessions]);
@@ -34,7 +55,24 @@ export default function ProfileOverviewPage() {
   const muscles = useMemo(() => muscleDistribution(sessions), [sessions]);
   const activity = useMemo(() => recentActivity(sessions, runs), [sessions, runs]);
   const heatmap = useMemo(() => activityHeatmap(sessions, runs), [sessions, runs]);
+  const calendarDays: CalendarDay[] = useMemo(
+    () => (monthAnchor == null ? [] : monthCalendar(sessions, runs, monthAnchor)),
+    [sessions, runs, monthAnchor],
+  );
+  const unlocked = useMemo(
+    () => unlockedAchievements(sessions, runs, measurements),
+    [sessions, runs, measurements],
+  );
   const km = totalDistance(runs);
+
+  const monthLabel = monthAnchor == null ? "" : new Date(monthAnchor).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const selectedDay = calendarDays.find((day) => day.date === selectedDate) ?? null;
+  const selectedDaySessions = selectedDay
+    ? sessions.filter((s) => new Date(s.date).setHours(0, 0, 0, 0) === selectedDay.date)
+    : [];
+  const selectedDayRuns = selectedDay
+    ? runs.filter((r) => new Date(r.date).setHours(0, 0, 0, 0) === selectedDay.date)
+    : [];
 
   const loading = sessionsLoading || runsLoading;
 
@@ -48,12 +86,71 @@ export default function ProfileOverviewPage() {
       </div>
 
       <Card className="p-5">
-        <SectionLabel>Consistência</SectionLabel>
-        <h3 className="mt-1 text-lg font-semibold text-white">Atividade nas últimas 16 semanas</h3>
+        <SectionLabel>Conquistas</SectionLabel>
+        <h3 className="mt-1 text-lg font-semibold text-white">
+          {unlocked.size} de {ACHIEVEMENTS.length} troféus desbloqueados
+        </h3>
         <div className="mt-4">
-          <ActivityHeatmap weeks={heatmap} />
+          <AchievementGrid unlocked={unlocked} sessions={sessions} runs={runs} measurements={measurements} />
         </div>
       </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-5">
+          <SectionLabel>Calendário</SectionLabel>
+          {monthAnchor == null || todayTimestamp == null ? (
+            <div className="mt-4 h-[280px] animate-pulse rounded-2xl bg-white/5" />
+          ) : (
+            <>
+              <div className="mt-1">
+                <MonthCalendar
+                  days={calendarDays}
+                  monthLabel={monthLabel}
+                  todayTimestamp={todayTimestamp}
+                  selectedDate={selectedDate}
+                  onPrevMonth={() => {
+                    setMonthAnchor((current) => (current == null ? current : addMonths(current, -1)));
+                    setSelectedDate(null);
+                  }}
+                  onNextMonth={() => {
+                    setMonthAnchor((current) => (current == null ? current : addMonths(current, 1)));
+                    setSelectedDate(null);
+                  }}
+                  onSelectDay={(day) => setSelectedDate((current) => (current === day.date ? null : day.date))}
+                />
+              </div>
+              {selectedDay ? (
+                <div className="mt-4 space-y-2 border-t border-[var(--border)] pt-4">
+                  {selectedDaySessions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-slate-200"
+                    >
+                      🏋️ {s.workoutName}
+                    </div>
+                  ))}
+                  {selectedDayRuns.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-slate-200"
+                    >
+                      🏃 {r.distanceKm.toFixed(1)} km · {formatPace(r.paceSecPerKm)}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <SectionLabel>Consistência</SectionLabel>
+          <h3 className="mt-1 text-lg font-semibold text-white">Últimas 16 semanas</h3>
+          <div className="mt-4 overflow-x-auto">
+            <ActivityHeatmap weeks={heatmap} />
+          </div>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">

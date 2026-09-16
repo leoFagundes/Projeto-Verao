@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
+import { cn } from "@/lib/utils";
 import type { MuscleGroup } from "@/types/workout";
 
 export type FormExercise = {
@@ -21,17 +22,22 @@ export type FormExercise = {
   videoUrl: string | null;
   notes: string;
   hidden: boolean;
+  linkedToNext: boolean;
 };
 
 export function ExerciseRow({
   exercise,
   onChange,
   onRemove,
+  connectedToPrev,
+  connectedToNext,
 }: {
   exercise: FormExercise;
   index: number;
   onChange: (patch: Partial<FormExercise>) => void;
   onRemove: () => void;
+  connectedToPrev?: boolean;
+  connectedToNext?: boolean;
 }) {
   const controls = useDragControls();
   const [viewingImages, setViewingImages] = useState(false);
@@ -39,11 +45,29 @@ export function ExerciseRow({
 
   return (
     <Reorder.Item
+      as="div"
       value={exercise}
       dragListener={false}
       dragControls={controls}
-      className="rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-4"
+      className={cn(
+        "border p-4",
+        connectedToPrev || connectedToNext
+          ? "border-[var(--accent)]/40 bg-[var(--accent-soft)]"
+          : "border-[var(--border)] bg-[var(--surface-2)]",
+        connectedToPrev && connectedToNext
+          ? "rounded-none"
+          : connectedToNext
+            ? "rounded-t-[22px] rounded-b-none"
+            : connectedToPrev
+              ? "rounded-b-[22px] rounded-t-none"
+              : "rounded-[22px]",
+      )}
     >
+      {connectedToPrev || connectedToNext ? (
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
+          🔗 Superserie
+        </p>
+      ) : null}
       <div className="flex items-start gap-3">
         <button
           type="button"

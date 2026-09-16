@@ -9,6 +9,8 @@ import { deleteSession } from "@/lib/firebase/sessions";
 import { formatDateLong, formatDuration } from "@/lib/utils";
 import type { WorkoutSession } from "@/types/session";
 
+import { WorkoutShareModal } from "./workout-share-modal";
+
 export function SessionHistoryList({
   profileId,
   sessions,
@@ -17,6 +19,7 @@ export function SessionHistoryList({
   sessions: WorkoutSession[];
 }) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<WorkoutSession | null>(null);
 
   if (sessions.length === 0) {
     return <EmptyState title="Nenhuma sessão registrada" description="Realize este treino para ver o histórico aqui." />;
@@ -44,13 +47,22 @@ export function SessionHistoryList({
               </p>
               {session.note ? <p className="mt-1 text-xs text-slate-500">{session.note}</p> : null}
             </div>
-            <button
-              type="button"
-              onClick={() => setPendingDelete(session.id)}
-              className="shrink-0 text-xs font-medium text-red-300 hover:text-red-200"
-            >
-              Remover
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSharing(session)}
+                className="text-xs font-medium text-[var(--accent)] hover:underline"
+              >
+                Compartilhar
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingDelete(session.id)}
+                className="text-xs font-medium text-red-300 hover:text-red-200"
+              >
+                Remover
+              </button>
+            </div>
           </div>
         );
       })}
@@ -69,6 +81,8 @@ export function SessionHistoryList({
           );
         }}
       />
+
+      <WorkoutShareModal session={sharing} open={sharing !== null} onClose={() => setSharing(null)} />
     </div>
   );
 }

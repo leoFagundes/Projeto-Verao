@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { MeasurementChart } from "@/components/charts/measurement-chart";
+import { GoalCard } from "@/components/measurements/goal-card";
+import { GoalFormModal } from "@/components/measurements/goal-form-modal";
 import { MeasurementCard } from "@/components/measurements/measurement-card";
 import { MeasurementCompareModal } from "@/components/measurements/measurement-compare-modal";
 import { MeasurementFormModal } from "@/components/measurements/measurement-form-modal";
@@ -15,6 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { StatTile } from "@/components/ui/stat-tile";
 import { deleteMeasurement } from "@/lib/firebase/measurements";
+import { useGoals } from "@/lib/hooks/use-goals";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
 import { latestBmi, measurementSeries, measurementTrend } from "@/lib/stats";
 import { cn, formatDateLong } from "@/lib/utils";
@@ -23,8 +26,10 @@ import { MEASUREMENT_FIELDS, type BodyMeasurement, type MeasurementFieldKey } fr
 export default function MeasurementsPage() {
   const params = useParams<{ id: string }>();
   const { measurements, loading } = useMeasurements(params.id);
+  const { goals } = useGoals(params.id);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [goalFormOpen, setGoalFormOpen] = useState(false);
   const [editing, setEditing] = useState<BodyMeasurement | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BodyMeasurement | null>(null);
   const [selectedField, setSelectedField] = useState<MeasurementFieldKey>("weightKg");
@@ -125,6 +130,31 @@ export default function MeasurementsPage() {
           <Card className="p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
+                <SectionLabel>Metas</SectionLabel>
+                <h3 className="mt-1 text-lg font-semibold text-white">Objetivos em andamento</h3>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setGoalFormOpen(true)}>
+                + Nova meta
+              </Button>
+            </div>
+            <div className="mt-4">
+              {goals.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Defina uma meta pra acompanhar o progresso — ex.: chegar a 75kg ou 15% de gordura corporal.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {goals.map((goal) => (
+                    <GoalCard key={goal.id} goal={goal} measurements={measurements} profileId={params.id} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
                 <SectionLabel>Evolução</SectionLabel>
                 <h3 className="mt-1 text-lg font-semibold text-white">
                   {fieldMeta?.label ?? "Peso"} ao longo do tempo
@@ -204,7 +234,16 @@ export default function MeasurementsPage() {
         {loading ? (
           <div className="space-y-3">
             {[0, 1].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-[24px] bg-white/5" />
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+              >
+                <div className="h-12 w-12 shrink-0 animate-pulse rounded-2xl bg-white/5" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-1/4 animate-pulse rounded bg-white/5" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-white/5" />
+                </div>
+              </div>
             ))}
           </div>
         ) : measurements.length === 0 ? (
@@ -230,6 +269,13 @@ export default function MeasurementsPage() {
           </div>
         )}
       </div>
+
+      <GoalFormModal
+        open={goalFormOpen}
+        onClose={() => setGoalFormOpen(false)}
+        profileId={params.id}
+        measurements={measurements}
+      />
 
       <MeasurementFormModal open={formOpen} onClose={() => setFormOpen(false)} profileId={params.id} />
       <MeasurementFormModal

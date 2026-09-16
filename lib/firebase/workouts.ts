@@ -43,6 +43,7 @@ function normalizeStoredExercise(exercise: Record<string, unknown>): Exercise {
     videoUrl: (exercise.videoUrl as string | null | undefined) ?? null,
     notes: (exercise.notes as string) ?? "",
     hidden: (exercise.hidden as boolean) ?? false,
+    linkedToNext: (exercise.linkedToNext as boolean) ?? false,
   };
 }
 
@@ -82,6 +83,7 @@ function normalizeExercises(exercises: WorkoutInput["exercises"]) {
     hidden: exercise.hidden ?? false,
     images: exercise.images ?? [],
     videoUrl: exercise.videoUrl ?? null,
+    linkedToNext: exercise.linkedToNext ?? false,
   }));
 }
 

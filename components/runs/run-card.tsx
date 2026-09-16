@@ -40,7 +40,10 @@ export function RunCard({
             </span>
           </div>
           <p className="text-sm text-slate-300">
-            {formatPace(run.paceSecPerKm)} · {formatDuration(run.durationMin)}
+            {run.type === "tiro" && run.repCount && run.repDistanceM
+              ? `${run.repCount}x ${run.repDistanceM}m`
+              : formatPace(run.paceSecPerKm)}{" "}
+            · {formatDuration(run.durationMin)}
           </p>
           {run.note ? <p className="mt-1 text-xs text-slate-500">{run.note}</p> : null}
         </div>

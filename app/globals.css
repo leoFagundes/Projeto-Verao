@@ -39,6 +39,27 @@
   --accent-soft: rgba(244, 114, 182, 0.14);
 }
 
+[data-theme="roxo"] {
+  --accent: #a78bfa;
+  --accent-2: #e879f9;
+  --accent-rgb: 167, 139, 250;
+  --accent-soft: rgba(167, 139, 250, 0.14);
+}
+
+[data-theme="laranja"] {
+  --accent: #fb923c;
+  --accent-2: #fbbf24;
+  --accent-rgb: 251, 146, 60;
+  --accent-soft: rgba(251, 146, 60, 0.14);
+}
+
+[data-theme="ciano"] {
+  --accent: #22d3ee;
+  --accent-2: #2dd4bf;
+  --accent-rgb: 34, 211, 238;
+  --accent-soft: rgba(34, 211, 238, 0.14);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -58,6 +79,18 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/* Browsers force a light gray/yellow background on autofilled inputs
+   (password fields especially) regardless of our own CSS — this repaints
+   it as our own field background instead of fighting it after the fact. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0px 1000px var(--field-bg) inset;
+  box-shadow: 0 0 0px 1000px var(--field-bg) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 img {

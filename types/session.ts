@@ -12,6 +12,7 @@ export type SessionExerciseLog = {
   name: string;
   muscleGroup: MuscleGroup | null;
   sets: SetLog[];
+  notes: string;
 };
 
 export type WorkoutSession = {

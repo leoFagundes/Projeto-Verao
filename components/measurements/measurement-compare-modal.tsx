@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Modal } from "@/components/ui/modal";
+import { PhotoCompareSlider } from "@/components/ui/photo-compare-slider";
 import { formatDateLong } from "@/lib/utils";
 import { MEASUREMENT_FIELDS } from "@/types/measurement";
 import type { BodyMeasurement } from "@/types/measurement";
@@ -20,10 +21,24 @@ export function MeasurementCompareModal({
   measurements: BodyMeasurement[];
 }) {
   const [viewing, setViewing] = useState<{ photos: string[]; index: number } | null>(null);
+  const [sliderOpen, setSliderOpen] = useState(false);
   const ordered = [...measurements].sort((a, b) => a.date - b.date);
+  const before = ordered[0];
+  const after = ordered[ordered.length - 1];
+  const canSlide = ordered.length === 2 && before.photos.length > 0 && after.photos.length > 0;
 
   return (
     <Modal open={open} onClose={onClose} title="Comparar medidas">
+      {canSlide ? (
+        <button
+          type="button"
+          onClick={() => setSliderOpen(true)}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] py-2.5 text-sm font-medium text-[var(--accent)] hover:brightness-110"
+        >
+          ↔ Ver slider antes/depois
+        </button>
+      ) : null}
+
       <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6">
         {ordered.map((measurement) => (
           <div
@@ -85,6 +100,17 @@ export function MeasurementCompareModal({
         open={viewing !== null}
         onClose={() => setViewing(null)}
       />
+
+      {canSlide ? (
+        <PhotoCompareSlider
+          before={before.photos[0]}
+          after={after.photos[0]}
+          beforeLabel={formatDateLong(before.date)}
+          afterLabel={formatDateLong(after.date)}
+          open={sliderOpen}
+          onClose={() => setSliderOpen(false)}
+        />
+      ) : null}
     </Modal>
   );
 }

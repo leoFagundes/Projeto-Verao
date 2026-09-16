@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AdminGate } from "@/components/layout/admin-gate";
+import { AdminTabs } from "@/components/layout/admin-tabs";
 import { AppHeader } from "@/components/layout/app-header";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Avatar } from "@/components/ui/avatar";
@@ -46,28 +46,7 @@ function AdminContent() {
   return (
     <main className="min-h-dvh bg-[var(--bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <AppHeader
-          eyebrow="Admin"
-          title="Projeto Verão"
-          action={
-            <div className="flex items-center gap-2">
-              <Link
-                href="/admin/exercicios"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-white transition hover:border-[var(--accent)]"
-              >
-                <span className="sm:hidden">Exercícios</span>
-                <span className="hidden sm:inline">Biblioteca de exercícios</span>
-              </Link>
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-white transition hover:border-[var(--accent)] sm:px-4"
-              >
-                <span className="sm:hidden">Voltar</span>
-                <span className="hidden sm:inline">Voltar ao app</span>
-              </Link>
-            </div>
-          }
-        />
+        <AppHeader eyebrow="Admin" title="Projeto Verão" backHref="/" action={<AdminTabs />} />
 
         <section className="mt-6">
           <Card className="p-5 sm:p-6">
@@ -136,7 +115,12 @@ function AdminContent() {
       <Modal open={editing !== null} onClose={() => setEditing(null)} title="Editar perfil">
         {editing ? (
           <ProfileForm
-            initialValues={{ name: editing.name, photoUrl: editing.photoUrl, theme: editing.theme }}
+            initialValues={{
+              name: editing.name,
+              photoUrl: editing.photoUrl,
+              theme: editing.theme,
+              password: editing.password,
+            }}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdate}
             onCancel={() => setEditing(null)}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { ProfilePasswordGate } from "@/components/layout/profile-password-gate";
 import { ProfileShell } from "@/components/layout/profile-shell";
 import { useProfile } from "@/lib/hooks/use-profile";
 
@@ -33,5 +34,9 @@ export default function ProfileLayout({ children }: LayoutProps<"/perfil/[id]">)
     );
   }
 
-  return <ProfileShell profile={profile}>{children}</ProfileShell>;
+  return (
+    <ProfilePasswordGate profile={profile}>
+      <ProfileShell profile={profile}>{children}</ProfileShell>
+    </ProfilePasswordGate>
+  );
 }

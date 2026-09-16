@@ -18,6 +18,9 @@ function runsRef(profileId: string) {
 }
 
 function computePace(input: RunInput) {
+  // Pace isn't a meaningful number for interval splits (rest between reps
+  // skews it), so "tiro" runs simply don't carry one.
+  if (input.type === "tiro") return 0;
   if (input.distanceKm <= 0) return 0;
   return Math.round((input.durationMin * 60) / input.distanceKm);
 }
@@ -34,10 +37,18 @@ export function subscribeRuns(
     q,
     (snapshot) => {
       onData(
-        snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<Run, "id">),
-        })),
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Omit<Run, "id" | "repCount" | "repDistanceM"> & {
+            repCount?: number | null;
+            repDistanceM?: number | null;
+          };
+          return {
+            id: docSnap.id,
+            ...data,
+            repCount: data.repCount ?? null,
+            repDistanceM: data.repDistanceM ?? null,
+          };
+        }),
       );
     },
     (error) => onError?.(error),

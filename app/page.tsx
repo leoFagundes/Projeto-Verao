@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
+import { Trophy } from "lucide-react";
+import Link from "next/link";
 
 import { AppHeader } from "@/components/layout/app-header";
 import { ProfileCard } from "@/components/profile/profile-card";
@@ -18,13 +19,22 @@ export default function HomePage() {
           eyebrow="Projeto Verão"
           title="Seu espaço de treino"
           action={
-            <Link
-              href="/admin"
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-lg text-white transition hover:border-[var(--accent)]"
-              aria-label="Administrar perfis"
-            >
-              ⚙️
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/painel"
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
+                aria-label="Ver painel geral de todos os perfis"
+              >
+                <Trophy className="h-5 w-5" />
+              </Link>
+              <Link
+                href="/admin"
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-lg text-white transition hover:border-[var(--accent)]"
+                aria-label="Administrar perfis"
+              >
+                ⚙️
+              </Link>
+            </div>
           }
         />
 

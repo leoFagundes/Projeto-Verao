@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AdminGate } from "@/components/layout/admin-gate";
+import { AdminTabs } from "@/components/layout/admin-tabs";
 import { AppHeader } from "@/components/layout/app-header";
 import { ExerciseDefForm } from "@/components/workouts/exercise-def-form";
 import { Card, SectionLabel } from "@/components/ui/card";
@@ -15,7 +16,9 @@ import { Modal } from "@/components/ui/modal";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { createExerciseDef, deleteExerciseDef, updateExerciseDef } from "@/lib/firebase/exercises";
 import { useExercises } from "@/lib/hooks/use-exercises";
+import { cn } from "@/lib/utils";
 import type { ExerciseDef, ExerciseDefInput } from "@/types/exercise";
+import { MUSCLE_GROUPS, type MuscleGroup } from "@/types/workout";
 
 function ExerciseLibraryContent() {
   const { exercises, loading } = useExercises();
@@ -23,6 +26,22 @@ function ExerciseLibraryContent() {
   const [pendingDelete, setPendingDelete] = useState<ExerciseDef | null>(null);
   const [viewingImages, setViewingImages] = useState<ExerciseDef | null>(null);
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | "todos">("todos");
+
+  const usedMuscleGroups = useMemo(
+    () => MUSCLE_GROUPS.filter((group) => exercises.some((exercise) => exercise.muscleGroup === group)),
+    [exercises],
+  );
+
+  const filteredExercises = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return exercises.filter((exercise) => {
+      const matchesSearch = query === "" || exercise.name.toLowerCase().includes(query);
+      const matchesMuscle = muscleFilter === "todos" || exercise.muscleGroup === muscleFilter;
+      return matchesSearch && matchesMuscle;
+    });
+  }, [exercises, search, muscleFilter]);
 
   async function handleCreate(values: ExerciseDefInput) {
     try {
@@ -47,18 +66,7 @@ function ExerciseLibraryContent() {
   return (
     <main className="min-h-dvh bg-[var(--bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <AppHeader
-          eyebrow="Admin"
-          title="Biblioteca de exercícios"
-          action={
-            <Link
-              href="/admin"
-              className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-white transition hover:border-[var(--accent)] sm:px-4"
-            >
-              Voltar
-            </Link>
-          }
-        />
+        <AppHeader eyebrow="Admin" title="Projeto Verão" backHref="/" action={<AdminTabs />} />
 
         <p className="mt-4 text-sm text-slate-400">
           Exercícios cadastrados aqui ficam disponíveis para todos os perfis montarem seus treinos,
@@ -81,10 +89,74 @@ function ExerciseLibraryContent() {
             {loading ? "Carregando..." : `${exercises.length} exercício${exercises.length === 1 ? "" : "s"}`}
           </h2>
 
+          {!loading && exercises.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar exercício..."
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--field-bg)] py-2.5 pl-11 pr-4 text-sm text-white outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+              {usedMuscleGroups.length > 1 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMuscleFilter("todos")}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-xs font-medium transition",
+                      muscleFilter === "todos"
+                        ? "text-slate-950"
+                        : "border border-[var(--border)] text-slate-300 hover:text-white",
+                    )}
+                    style={
+                      muscleFilter === "todos"
+                        ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }
+                        : undefined
+                    }
+                  >
+                    Todos
+                  </button>
+                  {usedMuscleGroups.map((group) => (
+                    <button
+                      key={group}
+                      type="button"
+                      onClick={() => setMuscleFilter(group)}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-xs font-medium transition",
+                        muscleFilter === group
+                          ? "text-slate-950"
+                          : "border border-[var(--border)] text-slate-300 hover:text-white",
+                      )}
+                      style={
+                        muscleFilter === group
+                          ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }
+                          : undefined
+                      }
+                    >
+                      {group}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {loading ? (
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-24 animate-pulse rounded-[24px] bg-white/5" />
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface)] p-3"
+                >
+                  <div className="h-14 w-14 shrink-0 animate-pulse rounded-xl bg-white/5" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-white/5" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-white/5" />
+                  </div>
+                </div>
               ))}
             </div>
           ) : exercises.length === 0 ? (
@@ -94,9 +166,16 @@ function ExerciseLibraryContent() {
                 description="Use o formulário acima para começar sua biblioteca."
               />
             </div>
+          ) : filteredExercises.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState
+                title="Nenhum exercício encontrado"
+                description="Tente outra busca ou limpe o filtro de grupo muscular."
+              />
+            </div>
           ) : (
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {exercises.map((exercise) => (
+              {filteredExercises.map((exercise) => (
                 <div
                   key={exercise.id}
                   className="flex items-center gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface)] p-3"

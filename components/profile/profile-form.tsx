@@ -23,6 +23,7 @@ export function ProfileForm({
   const [name, setName] = useState(initialValues?.name ?? "");
   const [photoUrl, setPhotoUrl] = useState<string | null>(initialValues?.photoUrl ?? null);
   const [theme, setTheme] = useState<Theme>(initialValues?.theme ?? "padrao");
+  const [password, setPassword] = useState(initialValues?.password ?? "");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
@@ -31,11 +32,12 @@ export function ProfileForm({
 
     setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), photoUrl, theme });
+      await onSubmit({ name: name.trim(), photoUrl, theme, password: password.trim() || null });
       if (!initialValues) {
         setName("");
         setPhotoUrl(null);
         setTheme("padrao");
+        setPassword("");
       }
     } finally {
       setSubmitting(false);
@@ -66,6 +68,15 @@ export function ProfileForm({
         <span className="mb-2 block text-sm text-slate-300">Tema visual</span>
         <ThemePicker value={theme} onChange={setTheme} />
       </div>
+
+      <Field label="Senha (opcional)">
+        <Input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Deixe em branco para entrar sem senha"
+        />
+      </Field>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitting}>

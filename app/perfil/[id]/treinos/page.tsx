@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -18,10 +19,15 @@ import { formatDateLong } from "@/lib/utils";
 export default function WorkoutsPage() {
   const params = useParams<{ id: string }>();
   const { workouts, loading } = useWorkouts(params.id);
+  const [search, setSearch] = useState("");
   const sortedWorkouts = useMemo(
     () => [...workouts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
     [workouts],
   );
+  const filteredWorkouts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return query === "" ? sortedWorkouts : sortedWorkouts.filter((w) => w.name.toLowerCase().includes(query));
+  }, [sortedWorkouts, search]);
   const { activeSessions } = useActiveSessions(params.id);
   const [continuingWorkoutId, setContinuingWorkoutId] = useState<string | null>(null);
   const [discardingWorkoutId, setDiscardingWorkoutId] = useState<string | null>(null);
@@ -86,10 +92,31 @@ export default function WorkoutsPage() {
         </div>
       ) : null}
 
+      {!loading && workouts.length > 1 ? (
+        <div className="relative mb-4">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar treino..."
+            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--field-bg)] py-2.5 pl-11 pr-4 text-sm text-white outline-none focus:border-[var(--accent)]"
+          />
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {[0, 1].map((i) => (
-            <div key={i} className="h-32 animate-pulse rounded-[24px] bg-white/5" />
+            <div key={i} className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-white/5" />
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-white/5" />
+                </div>
+                <div className="h-11 w-11 shrink-0 animate-pulse rounded-2xl bg-white/5" />
+              </div>
+              <div className="mt-4 h-3 w-1/2 animate-pulse rounded bg-white/5" />
+            </div>
           ))}
         </div>
       ) : workouts.length === 0 ? (
@@ -102,9 +129,11 @@ export default function WorkoutsPage() {
             </Link>
           }
         />
+      ) : filteredWorkouts.length === 0 ? (
+        <EmptyState title="Nenhum treino encontrado" description="Tente outra busca." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {sortedWorkouts.map((workout, index) => (
+          {filteredWorkouts.map((workout, index) => (
             <WorkoutCard key={workout.id} workout={workout} profileId={params.id} index={index} />
           ))}
         </div>

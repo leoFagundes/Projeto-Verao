@@ -40,10 +40,14 @@ export function subscribeProfiles(
     q,
     (snapshot) => {
       onData(
-        snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as Omit<Profile, "id">),
-        })),
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Omit<Profile, "id" | "password"> & { password?: string | null };
+          return {
+            id: docSnap.id,
+            ...data,
+            password: data.password ?? null,
+          };
+        }),
       );
     },
     (error) => onError?.(error),
