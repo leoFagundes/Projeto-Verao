@@ -8,17 +8,22 @@ import { toast } from "sonner";
 
 import { WorkoutCard } from "@/components/workouts/workout-card";
 import { PerformWorkoutModal } from "@/components/workouts/perform-workout-modal";
+import { SessionHistoryList } from "@/components/workouts/session-history-list";
 import { Button } from "@/components/ui/button";
+import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { deleteActiveSession } from "@/lib/firebase/active-sessions";
 import { useActiveSessions } from "@/lib/hooks/use-active-sessions";
+import { useSessions } from "@/lib/hooks/use-sessions";
 import { useWorkouts } from "@/lib/hooks/use-workouts";
 import { formatDateLong } from "@/lib/utils";
 
 export default function WorkoutsPage() {
   const params = useParams<{ id: string }>();
   const { workouts, loading } = useWorkouts(params.id);
+  const { sessions } = useSessions(params.id);
+  const allSessions = useMemo(() => [...sessions].sort((a, b) => b.date - a.date), [sessions]);
   const [search, setSearch] = useState("");
   const sortedWorkouts = useMemo(
     () => [...workouts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
@@ -138,6 +143,16 @@ export default function WorkoutsPage() {
           ))}
         </div>
       )}
+
+      {!loading && allSessions.length > 0 ? (
+        <Card className="mt-8 p-5">
+          <SectionLabel>Histórico</SectionLabel>
+          <h3 className="mt-1 text-lg font-semibold text-white">Treinos realizados</h3>
+          <div className="mt-4">
+            <SessionHistoryList profileId={params.id} sessions={allSessions} showWorkoutName />
+          </div>
+        </Card>
+      ) : null}
 
       {continuingWorkout ? (
         <PerformWorkoutModal

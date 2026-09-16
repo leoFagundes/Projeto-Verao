@@ -1,6 +1,6 @@
 import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
 
-import type { ActiveSession, ActiveSessionInput, SessionExerciseLog } from "@/types/session";
+import type { ActiveSession, ActiveSessionInput, SessionExerciseLog, SetLog } from "@/types/session";
 
 import { db } from "./client";
 
@@ -36,12 +36,19 @@ export function subscribeActiveSessions(
       onData(
         snapshot.docs.map((docSnap) => {
           const data = docSnap.data() as Omit<ActiveSession, "id" | "exercises"> & {
-            exercises: (Omit<SessionExerciseLog, "notes"> & { notes?: string })[];
+            exercises: (Omit<SessionExerciseLog, "notes" | "sets"> & {
+              notes?: string;
+              sets: (Omit<SetLog, "durationSeconds"> & { durationSeconds?: number | null })[];
+            })[];
           };
           return {
             id: docSnap.id,
             ...data,
-            exercises: data.exercises.map((exercise) => ({ ...exercise, notes: exercise.notes ?? "" })),
+            exercises: data.exercises.map((exercise) => ({
+              ...exercise,
+              notes: exercise.notes ?? "",
+              sets: exercise.sets.map((set) => ({ ...set, durationSeconds: set.durationSeconds ?? null })),
+            })),
           };
         }),
       );

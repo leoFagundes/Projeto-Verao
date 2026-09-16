@@ -60,7 +60,7 @@ export function WorkoutShareModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Compartilhar treino">
-      <div className="flex justify-center overflow-x-auto rounded-2xl bg-[var(--field-bg)] p-4">
+      <div className="flex justify-center overflow-x-auto rounded-2xl bg-[var(--field-bg)] p-3 sm:p-4">
         <div ref={cardRef}>
           <WorkoutShareCard session={session} />
         </div>

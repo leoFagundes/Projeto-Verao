@@ -1,4 +1,6 @@
-import { formatDateLong, formatDuration } from "@/lib/utils";
+import { Clock, Dumbbell, Repeat } from "lucide-react";
+
+import { formatClock, formatDateLong, formatDuration } from "@/lib/utils";
 import type { WorkoutSession } from "@/types/session";
 
 function totalVolume(session: WorkoutSession) {
@@ -29,7 +31,7 @@ export function WorkoutShareCard({ session }: { session: WorkoutSession }) {
   const volume = totalVolume(session);
 
   return (
-    <div className="w-[380px] rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="w-[min(380px,calc(100vw-5rem))] rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
@@ -37,7 +39,12 @@ export function WorkoutShareCard({ session }: { session: WorkoutSession }) {
           </p>
           <h2 className="mt-1 truncate text-xl font-bold text-white">{session.workoutName}</h2>
         </div>
-        <span className="shrink-0 text-2xl">🏋️</span>
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl"
+          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+        >
+          <Dumbbell className="h-5 w-5" />
+        </span>
       </div>
 
       <p className="mt-1.5 text-xs text-slate-400">
@@ -53,14 +60,38 @@ export function WorkoutShareCard({ session }: { session: WorkoutSession }) {
       <div className="mt-5 space-y-2.5">
         {session.exercises.map((log) => {
           const done = log.sets.filter((set) => set.done);
+          const isTimeBased = done.some((set) => set.durationSeconds != null);
+          const weights = done.map((set) => set.weight).filter((weight): weight is number => weight != null);
+          const topWeight = weights.length > 0 ? Math.max(...weights) : null;
+
           return (
             <div key={log.id} className="border-t border-[var(--border)] pt-2.5">
-              <p className="text-sm font-semibold text-white">{log.name}</p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {done.length > 0
-                  ? done.map((set) => `${set.reps}${set.weight != null ? `×${set.weight}kg` : ""}`).join(" · ")
-                  : "Não concluído"}
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 break-words text-sm font-semibold text-white">{log.name}</p>
+                <span
+                  className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]"
+                  style={{ background: "var(--field-bg)", color: "var(--accent)" }}
+                >
+                  {isTimeBased ? <Clock className="h-2.5 w-2.5" /> : <Repeat className="h-2.5 w-2.5" />}
+                  {isTimeBased ? "Tempo" : "Reps"}
+                </span>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="break-words text-xs text-slate-400">
+                  {done.length > 0
+                    ? done.map((set) => (isTimeBased ? formatClock(set.durationSeconds ?? 0) : set.reps)).join(" · ")
+                    : "Não concluído"}
+                </p>
+                {topWeight != null ? (
+                  <span
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-[var(--bg)]"
+                    style={{ background: "var(--accent)" }}
+                  >
+                    <Dumbbell className="h-2.5 w-2.5" />
+                    {topWeight}kg
+                  </span>
+                ) : null}
+              </div>
             </div>
           );
         })}

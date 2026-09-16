@@ -58,6 +58,16 @@ export function addMonths(timestamp: number, delta: number) {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1).getTime();
 }
 
+/** Formats a whole number of seconds as "m:ss" (or "h:mm:ss" past an hour). */
+export function formatClock(totalSeconds: number) {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function formatDuration(minutes: number) {
   if (minutes < 60) return `${Math.round(minutes)} min`;
   const h = Math.floor(minutes / 60);

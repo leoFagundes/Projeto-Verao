@@ -13,12 +13,19 @@ export const MUSCLE_GROUPS = [
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 
+export const MEASURE_TYPES = ["reps", "time"] as const;
+export type MeasureType = (typeof MEASURE_TYPES)[number];
+
 export type Exercise = {
   id: string;
   exerciseId: string;
   name: string;
   sets: number;
   reps: string;
+  /** Target duration (seconds) per set — only meaningful when `measureType` is "time". */
+  durationSeconds: number | null;
+  /** Whether this exercise is tracked by reps or by a timed hold/interval. */
+  measureType: MeasureType;
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;

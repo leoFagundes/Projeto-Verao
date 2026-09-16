@@ -14,9 +14,11 @@ import { WorkoutShareModal } from "./workout-share-modal";
 export function SessionHistoryList({
   profileId,
   sessions,
+  showWorkoutName = false,
 }: {
   profileId: string;
   sessions: WorkoutSession[];
+  showWorkoutName?: boolean;
 }) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [sharing, setSharing] = useState<WorkoutSession | null>(null);
@@ -40,7 +42,12 @@ export function SessionHistoryList({
             className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4"
           >
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white">{formatDateLong(session.date)}</p>
+              {showWorkoutName ? (
+                <p className="truncate text-sm font-medium text-white">{session.workoutName}</p>
+              ) : null}
+              <p className={showWorkoutName ? "text-xs text-slate-400" : "text-sm font-medium text-white"}>
+                {formatDateLong(session.date)}
+              </p>
               <p className="text-xs text-slate-400">
                 {formatDuration(session.durationMin)} · {doneSets}/{totalSets} séries ·{" "}
                 {session.exercises.length} exercícios

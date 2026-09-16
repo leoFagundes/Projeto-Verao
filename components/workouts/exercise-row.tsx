@@ -7,7 +7,7 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { cn } from "@/lib/utils";
-import type { MuscleGroup } from "@/types/workout";
+import type { MeasureType, MuscleGroup } from "@/types/workout";
 
 export type FormExercise = {
   id: string;
@@ -15,6 +15,8 @@ export type FormExercise = {
   name: string;
   sets: number;
   reps: string;
+  durationSeconds: number | null;
+  measureType: MeasureType;
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;
@@ -50,7 +52,7 @@ export function ExerciseRow({
       dragListener={false}
       dragControls={controls}
       className={cn(
-        "border p-4",
+        "overflow-hidden border p-4",
         connectedToPrev || connectedToNext
           ? "border-[var(--accent)]/40 bg-[var(--accent-soft)]"
           : "border-[var(--border)] bg-[var(--surface-2)]",
@@ -78,7 +80,7 @@ export function ExerciseRow({
           ⠿
         </button>
 
-        <div className="flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               {exercise.images.length > 0 ? (
@@ -120,6 +122,31 @@ export function ExerciseRow({
             </button>
           </div>
 
+          <div className="flex gap-1.5 rounded-xl bg-[var(--field-bg)] p-1">
+            <button
+              type="button"
+              onClick={() => onChange({ measureType: "reps" })}
+              className={cn(
+                "min-w-0 flex-1 truncate rounded-lg py-1.5 text-xs font-medium transition",
+                exercise.measureType === "time" ? "text-slate-400 hover:text-slate-200" : "text-[var(--bg)]",
+              )}
+              style={exercise.measureType === "reps" ? { background: "var(--accent)" } : undefined}
+            >
+              Repetições
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ measureType: "time" })}
+              className={cn(
+                "min-w-0 flex-1 truncate rounded-lg py-1.5 text-xs font-medium transition",
+                exercise.measureType === "time" ? "text-[var(--bg)]" : "text-slate-400 hover:text-slate-200",
+              )}
+              style={exercise.measureType === "time" ? { background: "var(--accent)" } : undefined}
+            >
+              Tempo
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Field label="Séries">
               <Input
@@ -129,13 +156,29 @@ export function ExerciseRow({
                 onChange={(event) => onChange({ sets: Number(event.target.value) || 1 })}
               />
             </Field>
-            <Field label="Repetições">
-              <Input
-                value={exercise.reps}
-                onChange={(event) => onChange({ reps: event.target.value })}
-                placeholder="8-12"
-              />
-            </Field>
+            {exercise.measureType === "time" ? (
+              <Field label="Duração alvo (s)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={exercise.durationSeconds ?? ""}
+                  onChange={(event) =>
+                    onChange({
+                      durationSeconds: event.target.value === "" ? null : Number(event.target.value),
+                    })
+                  }
+                  placeholder="Ex.: 40"
+                />
+              </Field>
+            ) : (
+              <Field label="Repetições">
+                <Input
+                  value={exercise.reps}
+                  onChange={(event) => onChange({ reps: event.target.value })}
+                  placeholder="8-12"
+                />
+              </Field>
+            )}
             <Field label="Carga (kg)">
               <Input
                 type="number"

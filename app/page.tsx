@@ -39,7 +39,9 @@ export default function HomePage() {
         />
 
         <section className="mt-8">
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Perfis</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+            Perfis
+          </p>
           <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
             Quem vai treinar hoje?
           </h2>
@@ -47,11 +49,18 @@ export default function HomePage() {
           {loading ? (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-72 animate-pulse rounded-[28px] bg-white/5" />
+                <div
+                  key={i}
+                  className="h-72 animate-pulse rounded-[28px] bg-white/5"
+                />
               ))}
             </div>
           ) : profiles.length === 0 ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6"
+            >
               <EmptyState
                 title="Nenhum perfil criado ainda"
                 description="Crie o primeiro perfil na área administrativa para começar a treinar."
@@ -59,7 +68,10 @@ export default function HomePage() {
                   <Link
                     href="/admin"
                     className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-slate-950"
-                    style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                    }}
                   >
                     Criar perfil
                   </Link>

@@ -130,23 +130,67 @@ export function bestWeightForExercise(sessions: WorkoutSession[], exerciseId: st
   return Math.max(...progression.map((point) => point.weight));
 }
 
+/** Longest completed set duration (seconds) for an exercise log, or null if none logged. */
+function topSetDuration(exercise: WorkoutSession["exercises"][number]) {
+  const durations = exercise.sets
+    .filter((set) => set.done && set.durationSeconds != null)
+    .map((set) => set.durationSeconds as number);
+  if (durations.length === 0) return null;
+  return Math.max(...durations);
+}
+
+/** Duration progression (top set per session) for one exercise, oldest first. */
+export function exerciseDurationProgression(sessions: WorkoutSession[], exerciseId: string) {
+  return [...sessions]
+    .sort((a, b) => a.date - b.date)
+    .flatMap((session) => {
+      const log = session.exercises.find((exercise) => exercise.exerciseId === exerciseId);
+      if (!log) return [];
+      const seconds = topSetDuration(log);
+      if (seconds == null) return [];
+      return [{ date: session.date, seconds }];
+    });
+}
+
+/** Most recent logged duration for an exercise, used to prefill a new session. */
+export function lastDurationForExercise(sessions: WorkoutSession[], exerciseId: string) {
+  const progression = exerciseDurationProgression(sessions, exerciseId);
+  return progression.length > 0 ? progression[progression.length - 1].seconds : null;
+}
+
+/** Longest duration ever logged for an exercise — the personal record. */
+export function bestDurationForExercise(sessions: WorkoutSession[], exerciseId: string) {
+  const progression = exerciseDurationProgression(sessions, exerciseId);
+  if (progression.length === 0) return null;
+  return Math.max(...progression.map((point) => point.seconds));
+}
+
 /**
- * Exercises in `newLogs` whose top set beats the best weight logged before this
- * session (from `previousSessions`, i.e. sessions that existed prior to saving).
- * Used to celebrate personal records right after a workout is logged.
+ * Exercises in `newLogs` whose top set beats the best weight or duration logged
+ * before this session (from `previousSessions`, i.e. sessions that existed prior
+ * to saving). Used to celebrate personal records right after a workout is logged.
  */
 export function detectNewRecords(
   previousSessions: WorkoutSession[],
   newLogs: WorkoutSession["exercises"],
 ) {
-  const records: { name: string; weight: number }[] = [];
+  const records: { name: string; weight?: number; seconds?: number }[] = [];
 
   for (const log of newLogs) {
-    const newBest = topSetWeight(log);
-    if (newBest == null) continue;
-    const previousBest = bestWeightForExercise(previousSessions, log.exerciseId);
-    if (previousBest != null && newBest > previousBest) {
-      records.push({ name: log.name, weight: newBest });
+    const newBestWeight = topSetWeight(log);
+    if (newBestWeight != null) {
+      const previousBest = bestWeightForExercise(previousSessions, log.exerciseId);
+      if (previousBest != null && newBestWeight > previousBest) {
+        records.push({ name: log.name, weight: newBestWeight });
+      }
+    }
+
+    const newBestDuration = topSetDuration(log);
+    if (newBestDuration != null) {
+      const previousBest = bestDurationForExercise(previousSessions, log.exerciseId);
+      if (previousBest != null && newBestDuration > previousBest) {
+        records.push({ name: log.name, seconds: newBestDuration });
+      }
     }
   }
 
@@ -155,21 +199,30 @@ export function detectNewRecords(
 
 /**
  * Date of every time, across all of history, an exercise's top set beat the
- * best logged before it — i.e. every moment a 🏆 record toast would have
- * fired. Replays sessions oldest-first so it matches `detectNewRecords`.
+ * best (weight or duration) logged before it — i.e. every moment a 🏆 record
+ * toast would have fired. Replays sessions oldest-first so it matches `detectNewRecords`.
  */
 export function recordDates(sessions: WorkoutSession[]): number[] {
   const sorted = [...sessions].sort((a, b) => a.date - b.date);
-  const bestSoFar = new Map<string, number>();
+  const bestWeightSoFar = new Map<string, number>();
+  const bestDurationSoFar = new Map<string, number>();
   const dates: number[] = [];
 
   for (const session of sorted) {
     for (const log of session.exercises) {
-      const top = topSetWeight(log);
-      if (top == null) continue;
-      const previousBest = bestSoFar.get(log.exerciseId);
-      if (previousBest != null && top > previousBest) dates.push(session.date);
-      bestSoFar.set(log.exerciseId, Math.max(previousBest ?? -Infinity, top));
+      const topWeight = topSetWeight(log);
+      if (topWeight != null) {
+        const previousBest = bestWeightSoFar.get(log.exerciseId);
+        if (previousBest != null && topWeight > previousBest) dates.push(session.date);
+        bestWeightSoFar.set(log.exerciseId, Math.max(previousBest ?? -Infinity, topWeight));
+      }
+
+      const topDuration = topSetDuration(log);
+      if (topDuration != null) {
+        const previousBest = bestDurationSoFar.get(log.exerciseId);
+        if (previousBest != null && topDuration > previousBest) dates.push(session.date);
+        bestDurationSoFar.set(log.exerciseId, Math.max(previousBest ?? -Infinity, topDuration));
+      }
     }
   }
 

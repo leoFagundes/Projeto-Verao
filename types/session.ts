@@ -3,6 +3,8 @@ import type { MuscleGroup } from "./workout";
 export type SetLog = {
   reps: string;
   weight: number | null;
+  /** Seconds actually held/logged for this set — only used for time-based exercises. */
+  durationSeconds: number | null;
   done: boolean;
 };
 

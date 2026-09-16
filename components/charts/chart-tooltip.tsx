@@ -9,11 +9,13 @@ export function ChartTooltip({
   payload,
   label,
   suffix = "",
+  formatValue,
 }: {
   active?: boolean;
   payload?: TooltipEntry[];
   label?: string;
   suffix?: string;
+  formatValue?: (value: number) => string;
 }) {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -26,7 +28,7 @@ export function ChartTooltip({
             <span className="h-2 w-2 rounded-full" style={{ background: entry.color }} />
           ) : null}
           <span className="font-semibold text-white">
-            {entry.value}
+            {formatValue && typeof entry.value === "number" ? formatValue(entry.value) : entry.value}
             {suffix}
           </span>
           {entry.name ? <span className="text-slate-400">{entry.name}</span> : null}

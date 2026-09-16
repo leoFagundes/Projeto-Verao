@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { Info } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,15 +16,19 @@ import { type Achievement, detectNewlyUnlocked } from "@/lib/achievements";
 import { deleteActiveSession, saveActiveSession } from "@/lib/firebase/active-sessions";
 import { createSession } from "@/lib/firebase/sessions";
 import { useActiveSessions } from "@/lib/hooks/use-active-sessions";
+import { useExercises } from "@/lib/hooks/use-exercises";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
+import { useProfiles } from "@/lib/hooks/use-profiles";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
-import { detectNewRecords, lastWeightForExercise } from "@/lib/stats";
-import { cn, formatDateInput, parseDateInput } from "@/lib/utils";
+import { detectNewRecords, lastDurationForExercise, lastWeightForExercise } from "@/lib/stats";
+import { cn, formatClock, formatDateInput, parseDateInput } from "@/lib/utils";
 import type { SessionExerciseLog, SetLog, WorkoutSession } from "@/types/session";
 import type { Workout } from "@/types/workout";
 
+import { ExerciseInfoModal } from "./exercise-info-modal";
 import { RestTimer } from "./rest-timer";
+import { SetTimer } from "./set-timer";
 
 const TIMER_PREF_KEY = "projeto-verao-rest-timer-enabled";
 const AUTOSAVE_DELAY_MS = 900;
@@ -36,9 +41,12 @@ function buildInitialLogs(workout: Workout, sessions: WorkoutSession[]): Session
   return visibleExercises(workout).map((exercise) => {
     const lastWeight = lastWeightForExercise(sessions, exercise.exerciseId);
     const weight = lastWeight ?? exercise.weight;
+    const lastDuration = lastDurationForExercise(sessions, exercise.exerciseId);
+    const durationSeconds = exercise.measureType === "time" ? lastDuration ?? exercise.durationSeconds ?? 0 : null;
     const sets: SetLog[] = Array.from({ length: Math.max(exercise.sets, 1) }, () => ({
       reps: exercise.reps,
       weight,
+      durationSeconds,
       done: false,
     }));
 
@@ -79,7 +87,12 @@ export function PerformWorkoutModal({
   const { sessions } = useSessions(profileId);
   const { runs } = useRuns(profileId);
   const { measurements } = useMeasurements(profileId);
-  const { activeSessions } = useActiveSessions(profileId);
+  const { activeSessions, loading: draftLoading } = useActiveSessions(profileId);
+  const { exercises: exerciseDefs } = useExercises();
+  const { profiles } = useProfiles();
+  const shareableProfiles = profiles.filter(
+    (profile) => profile.id !== profileId && profile.allowSharedWorkouts,
+  );
   const draft = activeSessions.find((item) => item.workoutId === workout.id) ?? null;
 
   const [date, setDate] = useState(() => formatDateInput(Date.now()));
@@ -98,6 +111,8 @@ export function PerformWorkoutModal({
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [step, setStep] = useState<"exercises" | "summary">("exercises");
+  const [viewingInfoFor, setViewingInfoFor] = useState<string | null>(null);
+  const [shareWithProfileIds, setShareWithProfileIds] = useState<string[]>([]);
   const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
@@ -120,8 +135,14 @@ export function PerformWorkoutModal({
     // draft if one exists for this workout, otherwise today's date, target
     // sets/reps and the last logged weight per exercise. Needs Date.now()
     // and the latest sessions/draft, so it can't be computed during render.
+    // Also waits for the active-session subscription to finish its first
+    // load: when this modal mounts fresh (e.g. from the "Continuar" button,
+    // which only renders it once a draft is picked), `activeSessions` starts
+    // out empty until Firestore responds — seeding immediately would build a
+    // blank form and never re-seed once the real draft arrives, making the
+    // in-progress workout look lost even though it's still saved.
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (!open) return;
+    if (!open || draftLoading) return;
     if (draft) {
       setDate(formatDateInput(draft.date));
       setDurationMin(draft.durationMin);
@@ -139,9 +160,10 @@ export function PerformWorkoutModal({
     }
     setResting(null);
     setStep("exercises");
+    setShareWithProfileIds([]);
     /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-rolls on open, using latest workout/sessions/draft closures
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-rolls on open/draftLoading, using latest workout/sessions/draft closures
+  }, [open, draftLoading]);
 
   useEffect(() => {
     if (!open || !hasProgress(exerciseLogs, durationMin, note)) return;
@@ -206,7 +228,15 @@ export function PerformWorkoutModal({
         const last = log.sets[log.sets.length - 1];
         return {
           ...log,
-          sets: [...log.sets, { reps: last?.reps ?? "", weight: last?.weight ?? null, done: false }],
+          sets: [
+            ...log.sets,
+            {
+              reps: last?.reps ?? "",
+              weight: last?.weight ?? null,
+              durationSeconds: last?.durationSeconds ?? null,
+              done: false,
+            },
+          ],
         };
       }),
     );
@@ -224,6 +254,26 @@ export function PerformWorkoutModal({
 
   function updateExerciseNote(exerciseId: string, notes: string) {
     setExerciseLogs((current) => current.map((log) => (log.id === exerciseId ? { ...log, notes } : log)));
+  }
+
+  function toggleShareProfile(profileId: string) {
+    setShareWithProfileIds((current) =>
+      current.includes(profileId) ? current.filter((id) => id !== profileId) : [...current, profileId],
+    );
+  }
+
+  function completeAllSets(exerciseId: string) {
+    setExerciseLogs((current) => current.map((log) =>
+      log.id === exerciseId ? { ...log, sets: log.sets.map((set) => ({ ...set, done: true })) } : log,
+    ));
+
+    const source = workout.exercises.find((exercise) => exercise.id === exerciseId);
+    if (source?.linkedToNext) {
+      const currentIndex = exerciseLogs.findIndex((log) => log.id === exerciseId);
+      setExpandedId(exerciseLogs[currentIndex + 1]?.id ?? null);
+    } else {
+      setExpandedId((current) => (current === exerciseId ? null : current));
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -260,8 +310,35 @@ export function PerformWorkoutModal({
       await deleteActiveSession(profileId, workout.id).catch(() => {});
       toast.success("Treino registrado!");
       for (const record of records) {
-        toast.success(`🏆 Novo recorde: ${record.name} — ${record.weight}kg!`, { duration: 5000 });
+        const value = record.weight != null ? `${record.weight}kg` : formatClock(record.seconds ?? 0);
+        toast.success(`🏆 Novo recorde: ${record.name} — ${value}!`, { duration: 5000 });
       }
+
+      if (shareWithProfileIds.length > 0) {
+        const sharedNames: string[] = [];
+        for (const targetProfileId of shareWithProfileIds) {
+          try {
+            // No `workoutId` on purpose — the target profile doesn't necessarily
+            // have this workout plan, only the completed log, which is all
+            // that stats/achievements/history need.
+            await createSession(targetProfileId, {
+              workoutId: null,
+              workoutName: workout.name,
+              date: parseDateInput(date),
+              durationMin,
+              note: note.trim(),
+              exercises: exerciseLogs,
+            });
+            sharedNames.push(profiles.find((profile) => profile.id === targetProfileId)?.name ?? "outro perfil");
+          } catch {
+            // Best-effort — one failed share shouldn't block the others or the main save.
+          }
+        }
+        if (sharedNames.length > 0) {
+          toast.success(`Treino também registrado para ${sharedNames.join(", ")}.`);
+        }
+      }
+
       if (newlyUnlocked.length > 0) {
         setCelebrating(newlyUnlocked);
       } else {
@@ -282,6 +359,7 @@ export function PerformWorkoutModal({
     setExpandedId(visibleExercises(workout)[0]?.id ?? null);
     setResting(null);
     setStep("exercises");
+    setShareWithProfileIds([]);
     startedAtRef.current = Date.now();
     deleteActiveSession(profileId, workout.id).catch(() => {});
     toast.success("Treino reiniciado.");
@@ -292,11 +370,11 @@ export function PerformWorkoutModal({
   const doneSets = exerciseLogs.reduce((sum, log) => sum + log.sets.filter((set) => set.done).length, 0);
 
   return (
-    <Modal open={open} onClose={onClose} title={`Realizar: ${workout.name}`}>
+    <Modal open={open} onClose={onClose} title={workout.name}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {draft ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-2.5 text-xs text-slate-200">
-            <span>Continuando um treino que você já tinha começado.</span>
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 text-xs text-slate-200">
+            <span className="truncate">Continuando treino em andamento</span>
             <button
               type="button"
               onClick={() => setConfirmReset(true)}
@@ -358,7 +436,7 @@ export function PerformWorkoutModal({
           ) : null}
         </AnimatePresence>
 
-        <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-[64vh] space-y-2 overflow-y-auto pr-1">
           {exerciseLogs.length === 0 ? (
             <p className="text-sm text-slate-500">
               Todos os exercícios deste treino estão ocultos no momento.
@@ -397,7 +475,7 @@ export function PerformWorkoutModal({
                     🔗 Superserie
                   </p>
                 ) : null}
-                <div className="flex w-full items-center gap-3 p-3">
+                <div className="flex w-full items-start gap-3 p-3">
                   {source && source.images.length > 0 ? (
                     <button
                       type="button"
@@ -418,30 +496,43 @@ export function PerformWorkoutModal({
                   <button
                     type="button"
                     onClick={() => toggleExpanded(log.id)}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
                   >
                     <span
                       className={cn(
-                        "shrink-0 text-xs text-slate-500 transition-transform",
+                        "mt-0.5 shrink-0 text-xs text-slate-500 transition-transform",
                         expanded ? "rotate-90" : "",
                       )}
                     >
                       ▸
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{log.name}</p>
+                      <p className="break-words text-sm font-medium text-white">{log.name}</p>
                       {log.muscleGroup ? <p className="text-xs text-slate-400">{log.muscleGroup}</p> : null}
                     </div>
                     {complete ? (
-                      <span className="shrink-0 rounded-full border border-[var(--accent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+                      <span className="mt-0.5 shrink-0 rounded-full border border-[var(--accent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
                         Concluído
                       </span>
                     ) : (
-                      <span className="shrink-0 text-xs text-slate-400">
+                      <span className="mt-0.5 shrink-0 text-xs text-slate-400">
                         {doneCount}/{log.sets.length} séries
                       </span>
                     )}
                   </button>
+                  {source ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewingInfoFor(log.id);
+                      }}
+                      className="mt-1 shrink-0 text-slate-500 hover:text-[var(--accent)]"
+                      aria-label="Ver instruções do exercício"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  ) : null}
                 </div>
 
                 <AnimatePresence initial={false}>
@@ -465,9 +556,9 @@ export function PerformWorkoutModal({
                         ) : null}
 
                         <div className="space-y-2">
-                          <div className="grid grid-cols-[1.75rem_1fr_1fr_2.25rem_1.5rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                          <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1.5rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
                             <span />
-                            <span>Reps</span>
+                            <span>{source?.measureType === "time" ? "Tempo" : "Reps"}</span>
                             <span>Carga (kg)</span>
                             <span className="text-center">OK</span>
                             <span />
@@ -475,17 +566,24 @@ export function PerformWorkoutModal({
                           {log.sets.map((set, index) => (
                             <div
                               key={index}
-                              className="grid grid-cols-[1.75rem_1fr_1fr_2.25rem_1.5rem] items-center gap-2"
+                              className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1.5rem] items-center gap-2"
                             >
                               <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)] text-xs font-medium text-slate-300">
                                 {index + 1}
                               </span>
-                              <input
-                                value={set.reps}
-                                onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
-                                placeholder="Reps"
-                                className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
-                              />
+                              {source?.measureType === "time" ? (
+                                <SetTimer
+                                  seconds={set.durationSeconds ?? 0}
+                                  onChange={(seconds) => updateSet(log.id, index, { durationSeconds: seconds })}
+                                />
+                              ) : (
+                                <input
+                                  value={set.reps}
+                                  onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
+                                  placeholder="Reps"
+                                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                                />
+                              )}
                               <input
                                 type="number"
                                 step="0.5"
@@ -524,13 +622,24 @@ export function PerformWorkoutModal({
                           ))}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => addSet(log.id)}
-                          className="text-xs font-medium text-[var(--accent)] hover:underline"
-                        >
-                          + Adicionar série
-                        </button>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <button
+                            type="button"
+                            onClick={() => addSet(log.id)}
+                            className="text-xs font-medium text-[var(--accent)] hover:underline"
+                          >
+                            + Adicionar série
+                          </button>
+                          {!complete ? (
+                            <button
+                              type="button"
+                              onClick={() => completeAllSets(log.id)}
+                              className="text-xs font-medium text-slate-400 hover:text-white"
+                            >
+                              ✓ Concluir tudo
+                            </button>
+                          ) : null}
+                        </div>
 
                         <Textarea
                           value={log.notes}
@@ -599,6 +708,40 @@ export function PerformWorkoutModal({
                 />
               </Field>
 
+              {shareableProfiles.length > 0 ? (
+                <div>
+                  <span className="mb-2 block text-sm text-slate-300">
+                    Compartilhar este treino com (opcional)
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {shareableProfiles.map((profile) => {
+                      const selected = shareWithProfileIds.includes(profile.id);
+                      return (
+                        <button
+                          key={profile.id}
+                          type="button"
+                          onClick={() => toggleShareProfile(profile.id)}
+                          aria-pressed={selected}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                            selected
+                              ? "border-[var(--accent)] text-[var(--bg)]"
+                              : "border-[var(--border)] text-slate-300 hover:border-[var(--accent)]",
+                          )}
+                          style={selected ? { background: "var(--accent)" } : undefined}
+                        >
+                          {selected ? "✓ " : ""}
+                          {profile.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Ao concluir, esse treino também entra no histórico e nas estatísticas dos perfis marcados.
+                  </p>
+                </div>
+              ) : null}
+
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Salvando..." : "Concluir treino"}
               </Button>
@@ -617,6 +760,17 @@ export function PerformWorkoutModal({
         url={viewingVideoUrl}
         open={viewingVideoUrl !== null}
         onClose={() => setViewingVideoUrl(null)}
+      />
+
+      <ExerciseInfoModal
+        exercise={workout.exercises.find((exercise) => exercise.id === viewingInfoFor) ?? null}
+        instructions={
+          exerciseDefs.find(
+            (def) => def.id === workout.exercises.find((exercise) => exercise.id === viewingInfoFor)?.exerciseId,
+          )?.notes ?? ""
+        }
+        open={viewingInfoFor !== null}
+        onClose={() => setViewingInfoFor(null)}
       />
 
       <ConfirmDialog

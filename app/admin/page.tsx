@@ -120,6 +120,7 @@ function AdminContent() {
               photoUrl: editing.photoUrl,
               theme: editing.theme,
               password: editing.password,
+              allowSharedWorkouts: editing.allowSharedWorkouts,
             }}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdate}

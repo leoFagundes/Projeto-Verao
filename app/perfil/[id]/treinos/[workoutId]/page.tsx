@@ -17,8 +17,13 @@ import { WorkoutForm } from "@/components/workouts/workout-form";
 import { deleteWorkout, setExerciseHidden, updateWorkout } from "@/lib/firebase/workouts";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { useWorkouts } from "@/lib/hooks/use-workouts";
-import { bestWeightForExercise, exerciseProgression } from "@/lib/stats";
-import { formatDate } from "@/lib/utils";
+import {
+  bestDurationForExercise,
+  bestWeightForExercise,
+  exerciseDurationProgression,
+  exerciseProgression,
+} from "@/lib/stats";
+import { formatClock, formatDate } from "@/lib/utils";
 import type { Exercise, WorkoutInput } from "@/types/workout";
 
 export default function WorkoutDetailPage() {
@@ -133,11 +138,22 @@ export default function WorkoutDetailPage() {
             </p>
           ) : null}
           {visibleExercises.map((exercise) => {
-            const progression = exerciseProgression(sessions, exercise.exerciseId);
+            const isTimeBased = exercise.measureType === "time";
+            const progression = isTimeBased
+              ? exerciseDurationProgression(sessions, exercise.exerciseId).map((p) => ({
+                  date: p.date,
+                  value: p.seconds,
+                }))
+              : exerciseProgression(sessions, exercise.exerciseId).map((p) => ({
+                  date: p.date,
+                  value: p.weight,
+                }));
             const latest = progression[progression.length - 1] ?? null;
             const previous = progression[progression.length - 2] ?? null;
-            const delta = latest && previous ? latest.weight - previous.weight : null;
-            const best = bestWeightForExercise(sessions, exercise.exerciseId);
+            const delta = latest && previous ? latest.value - previous.value : null;
+            const best = isTimeBased
+              ? bestDurationForExercise(sessions, exercise.exerciseId)
+              : bestWeightForExercise(sessions, exercise.exerciseId);
 
             return (
               <div
@@ -188,7 +204,9 @@ export default function WorkoutDetailPage() {
                       </div>
                     </div>
                     <p className="mt-1 text-sm text-slate-400">
-                      {exercise.sets}x{exercise.reps}
+                      {isTimeBased
+                        ? `${exercise.sets}x${exercise.durationSeconds ?? "—"}s`
+                        : `${exercise.sets}x${exercise.reps}`}
                       {exercise.weight ? ` · alvo ${exercise.weight}kg` : ""}
                       {exercise.restSeconds ? ` · ${exercise.restSeconds}s descanso` : ""}
                     </p>
@@ -211,16 +229,19 @@ export default function WorkoutDetailPage() {
                     ) : null}
                     {latest ? (
                       <p className="mt-2 text-sm font-medium text-white">
-                        Última carga: {latest.weight}kg
+                        {isTimeBased ? "Última marca: " : "Última carga: "}
+                        {isTimeBased ? formatClock(latest.value) : `${latest.value}kg`}
                         {delta != null && delta !== 0 ? (
                           <span className={delta > 0 ? "text-emerald-400" : "text-red-300"}>
                             {" "}
                             ({delta > 0 ? "+" : ""}
-                            {delta}kg)
+                            {isTimeBased ? `${delta}s` : `${delta}kg`})
                           </span>
                         ) : null}
                         {best != null ? (
-                          <span className="ml-2 text-amber-400">🏆 {best}kg</span>
+                          <span className="ml-2 text-amber-400">
+                            🏆 {isTimeBased ? formatClock(best) : `${best}kg`}
+                          </span>
                         ) : null}
                       </p>
                     ) : null}
@@ -229,7 +250,7 @@ export default function WorkoutDetailPage() {
 
                 {progression.length >= 2 ? (
                   <div className="mt-3">
-                    <ExerciseProgressionChart data={progression} />
+                    <ExerciseProgressionChart data={progression} unit={isTimeBased ? "s" : "kg"} />
                   </div>
                 ) : null}
               </div>

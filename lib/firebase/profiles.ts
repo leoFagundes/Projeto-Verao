@@ -41,11 +41,15 @@ export function subscribeProfiles(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<Profile, "id" | "password"> & { password?: string | null };
+          const data = docSnap.data() as Omit<Profile, "id" | "password" | "allowSharedWorkouts"> & {
+            password?: string | null;
+            allowSharedWorkouts?: boolean;
+          };
           return {
             id: docSnap.id,
             ...data,
             password: data.password ?? null,
+            allowSharedWorkouts: data.allowSharedWorkouts ?? false,
           };
         }),
       );

@@ -2,12 +2,20 @@
 
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
+import { formatClock } from "@/lib/utils";
+
 import { ChartTooltip } from "./chart-tooltip";
 
-export function ExerciseProgressionChart({ data }: { data: { date: number; weight: number }[] }) {
+export function ExerciseProgressionChart({
+  data,
+  unit = "kg",
+}: {
+  data: { date: number; value: number }[];
+  unit?: "kg" | "s";
+}) {
   const points = data.map((point) => ({
     label: new Date(point.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    kg: point.weight,
+    value: point.value,
   }));
 
   return (
@@ -20,10 +28,17 @@ export function ExerciseProgressionChart({ data }: { data: { date: number; weigh
           tick={{ fill: "#898781", fontSize: 10 }}
           interval="preserveStartEnd"
         />
-        <Tooltip content={<ChartTooltip suffix=" kg" />} />
+        <Tooltip
+          content={
+            <ChartTooltip
+              formatValue={unit === "s" ? (value) => formatClock(value) : undefined}
+              suffix={unit === "s" ? "" : " kg"}
+            />
+          }
+        />
         <Line
           type="monotone"
-          dataKey="kg"
+          dataKey="value"
           stroke="var(--accent)"
           strokeWidth={2}
           dot={{ r: 3, fill: "var(--accent)", strokeWidth: 0 }}
