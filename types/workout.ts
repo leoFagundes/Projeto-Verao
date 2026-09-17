@@ -42,6 +42,19 @@ export type ExerciseInput = Omit<Exercise, "id"> & { id?: string };
 /** Points at one other profile's copy of a linked workout. */
 export type WorkoutLinkRef = { profileId: string; workoutId: string };
 
+/** Left on a profile's own copy when a linked edit from someone else lands on
+ * it, so they get a heads-up next time they open it instead of a silent
+ * change. Cleared once they dismiss/acknowledge it. */
+export type WorkoutChangeNote = {
+  changedByProfileId: string;
+  changedByName: string;
+  changedAt: number;
+  addedNames: string[];
+  removedNames: string[];
+  renamed: boolean;
+  syncedFieldLabels: string[];
+};
+
 export type Workout = {
   id: string;
   name: string;
@@ -53,6 +66,7 @@ export type Workout = {
   lastPerformedAt: number | null;
   /** Other profiles' copies of this same workout — editing here can optionally propagate to all of them. */
   linkedWorkouts: WorkoutLinkRef[];
+  pendingChangeNote: WorkoutChangeNote | null;
 };
 
 export type WorkoutInput = {

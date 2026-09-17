@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Dumbbell, Info, Link2 } from "lucide-react";
+import { Dumbbell, Info, Link2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -45,8 +45,15 @@ export function WorkoutCard({ workout, profileId, index }: { workout: Workout; p
             >
               <Info className="h-4 w-4" />
             </button>
-            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
+            <div className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
               <Dumbbell className="h-6 w-6" />
+              {workout.pendingChangeNote ? (
+                <span
+                  className="absolute -right-1 -top-1 h-3.5 w-3.5 animate-pulse rounded-full border-2 border-[var(--surface)]"
+                  style={{ background: "var(--accent)" }}
+                  aria-hidden="true"
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -61,6 +68,12 @@ export function WorkoutCard({ workout, profileId, index }: { workout: Workout; p
             <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
               <Link2 className="h-3 w-3" />
               {workout.linkedWorkouts.length === 1 ? "1 vínculo" : `${workout.linkedWorkouts.length} vínculos`}
+            </span>
+          ) : null}
+          {workout.pendingChangeNote ? (
+            <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+              <Sparkles className="h-3 w-3" />
+              Atualizado
             </span>
           ) : null}
         </div>

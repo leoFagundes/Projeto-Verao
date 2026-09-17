@@ -16,6 +16,7 @@ import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { LinkEditChoiceModal } from "@/components/workouts/link-edit-choice-modal";
 import { PerformWorkoutModal } from "@/components/workouts/perform-workout-modal";
 import { SessionHistoryList } from "@/components/workouts/session-history-list";
+import { WorkoutChangeNoteBanner } from "@/components/workouts/workout-change-note-banner";
 import { WorkoutForm } from "@/components/workouts/workout-form";
 import { deleteWorkout, propagateWorkoutEdit, setExerciseHidden, updateWorkout, updateWorkoutAndUnlink } from "@/lib/firebase/workouts";
 import { useProfile } from "@/lib/hooks/use-profile";
@@ -78,7 +79,10 @@ export default function WorkoutDetailPage() {
   async function handleSync(syncFields: Set<PersonalExerciseField>) {
     if (!workout || !pendingEdit) return;
     try {
-      await propagateWorkoutEdit(params.id, params.workoutId, pendingEdit, workout.linkedWorkouts, syncFields);
+      await propagateWorkoutEdit(params.id, params.workoutId, pendingEdit, workout.linkedWorkouts, syncFields, {
+        profileId: params.id,
+        name: profile?.name ?? "Alguém",
+      });
       toast.success("Treino atualizado e sincronizado com os perfis vinculados!");
       setPendingEdit(null);
       setEditing(false);
@@ -168,6 +172,10 @@ export default function WorkoutDetailPage() {
 
   return (
     <div className="space-y-6">
+      {workout.pendingChangeNote ? (
+        <WorkoutChangeNoteBanner profileId={params.id} workoutId={workout.id} note={workout.pendingChangeNote} />
+      ) : null}
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <SectionLabel>Treino</SectionLabel>

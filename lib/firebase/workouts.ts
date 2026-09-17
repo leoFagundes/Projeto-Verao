@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { generateId } from "@/lib/utils";
-import { mergeLinkedExercises, type PersonalExerciseField } from "@/lib/workout-sync";
+import { mergeLinkedExercises, summarizeWorkoutChange, type PersonalExerciseField } from "@/lib/workout-sync";
 import type { Exercise, Workout, WorkoutInput, WorkoutLinkRef } from "@/types/workout";
 
 import { db } from "./client";
@@ -66,9 +66,10 @@ export function subscribeWorkouts(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<Workout, "id" | "exercises" | "linkedWorkouts"> & {
+          const data = docSnap.data() as Omit<Workout, "id" | "exercises" | "linkedWorkouts" | "pendingChangeNote"> & {
             exercises: Record<string, unknown>[];
             linkedWorkouts?: WorkoutLinkRef[];
+            pendingChangeNote?: Workout["pendingChangeNote"];
           };
           return {
             id: docSnap.id,
@@ -76,6 +77,7 @@ export function subscribeWorkouts(
             category: data.category ?? null,
             exercises: data.exercises.map(normalizeStoredExercise),
             linkedWorkouts: data.linkedWorkouts ?? [],
+            pendingChangeNote: data.pendingChangeNote ?? null,
           };
         }),
       );
@@ -107,6 +109,7 @@ export async function createWorkout(profileId: string, input: WorkoutInput) {
     updatedAt: now,
     lastPerformedAt: null,
     linkedWorkouts: [],
+    pendingChangeNote: null,
   });
   return docRef.id;
 }
@@ -128,13 +131,16 @@ export async function updateWorkout(
  * their order, name/category) to every linked profile, while each of their
  * personal prescription fields (sets/reps/weight/rest/notes/duration) is only
  * overwritten for the categories listed in `syncFields` — anything else stays
- * exactly as that profile already had it. */
+ * exactly as that profile already had it. Also leaves each target a short
+ * change note (who, what changed) so it isn't a silent surprise next time
+ * they open it. */
 export async function propagateWorkoutEdit(
   profileId: string,
   workoutId: string,
   input: WorkoutInput,
   linkedWorkouts: WorkoutLinkRef[],
   syncFields: Set<PersonalExerciseField>,
+  changedBy: { profileId: string; name: string },
 ) {
   const sourceExercises = normalizeExercises(input.exercises) as Exercise[];
   await updateWorkout(profileId, workoutId, input);
@@ -145,20 +151,38 @@ export async function propagateWorkoutEdit(
         const targetDoc = doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId);
         const targetSnap = await getDoc(targetDoc);
         if (!targetSnap.exists()) return;
-        const targetData = targetSnap.data() as { exercises?: Record<string, unknown>[] };
+        const targetData = targetSnap.data() as { name?: string; exercises?: Record<string, unknown>[] };
         const targetExercises = (targetData.exercises ?? []).map(normalizeStoredExercise);
         const mergedExercises = mergeLinkedExercises(sourceExercises, targetExercises, syncFields);
 
-        await updateWorkout(ref.profileId, ref.workoutId, {
+        const changeNote = summarizeWorkoutChange({
+          changedByProfileId: changedBy.profileId,
+          changedByName: changedBy.name,
+          sourceName: input.name,
+          targetNameBefore: targetData.name ?? input.name,
+          sourceExercises,
+          targetExercisesBefore: targetExercises,
+          syncedFields: syncFields,
+        });
+
+        await updateDoc(targetDoc, {
           name: input.name,
           category: input.category,
-          exercises: mergedExercises,
+          exercises: normalizeExercises(mergedExercises),
+          updatedAt: Date.now(),
+          ...(changeNote ? { pendingChangeNote: changeNote } : {}),
         });
       } catch {
         // Best-effort — one unreachable linked profile shouldn't block the rest.
       }
     }),
   );
+}
+
+export async function dismissWorkoutChangeNote(profileId: string, workoutId: string) {
+  await updateDoc(doc(requireDb(), "profiles", profileId, "workouts", workoutId), {
+    pendingChangeNote: null,
+  });
 }
 
 /** Saves an edit only to this profile's copy and leaves the link group —

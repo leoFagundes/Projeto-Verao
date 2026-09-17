@@ -1,4 +1,4 @@
-import type { Exercise } from "@/types/workout";
+import type { Exercise, WorkoutChangeNote } from "@/types/workout";
 
 /** Per-exercise fields that are personal prescription data (how much/how long
  * YOU do it) rather than the shared shape of the workout. Syncing any of
@@ -48,4 +48,51 @@ export function mergeLinkedExercises(
       durationSeconds: syncFields.has("durationSeconds") ? source.durationSeconds : target.durationSeconds,
     };
   });
+}
+
+/**
+ * Describes what a linked edit actually changes for one target profile, so
+ * they can get a heads-up instead of a silent change — or `null` if nothing
+ * worth flagging happened (e.g. the edit only touched fields that weren't
+ * chosen to sync). Exercises are matched by their stable `id`.
+ */
+export function summarizeWorkoutChange({
+  changedByProfileId,
+  changedByName,
+  sourceName,
+  targetNameBefore,
+  sourceExercises,
+  targetExercisesBefore,
+  syncedFields,
+}: {
+  changedByProfileId: string;
+  changedByName: string;
+  sourceName: string;
+  targetNameBefore: string;
+  sourceExercises: Exercise[];
+  targetExercisesBefore: Exercise[];
+  syncedFields: Set<PersonalExerciseField>;
+}): WorkoutChangeNote | null {
+  const sourceIds = new Set(sourceExercises.map((exercise) => exercise.id));
+  const targetIds = new Set(targetExercisesBefore.map((exercise) => exercise.id));
+  const addedNames = sourceExercises.filter((exercise) => !targetIds.has(exercise.id)).map((exercise) => exercise.name);
+  const removedNames = targetExercisesBefore
+    .filter((exercise) => !sourceIds.has(exercise.id))
+    .map((exercise) => exercise.name);
+  const renamed = sourceName !== targetNameBefore;
+  const syncedFieldLabels = [...syncedFields].map((field) => PERSONAL_FIELD_LABELS[field]);
+
+  if (addedNames.length === 0 && removedNames.length === 0 && !renamed && syncedFieldLabels.length === 0) {
+    return null;
+  }
+
+  return {
+    changedByProfileId,
+    changedByName,
+    changedAt: Date.now(),
+    addedNames,
+    removedNames,
+    renamed,
+    syncedFieldLabels,
+  };
 }

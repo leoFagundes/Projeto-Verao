@@ -52,7 +52,7 @@ export function ExerciseRow({
       dragListener={false}
       dragControls={controls}
       className={cn(
-        "overflow-hidden border p-4",
+        "overflow-hidden border p-4 transition-opacity",
         connectedToPrev || connectedToNext
           ? "border-[var(--accent)]/40 bg-[var(--accent-soft)]"
           : "border-[var(--border)] bg-[var(--surface-2)]",
@@ -63,6 +63,7 @@ export function ExerciseRow({
             : connectedToPrev
               ? "rounded-b-[22px] rounded-t-none"
               : "rounded-[22px]",
+        exercise.hidden ? "opacity-50" : "",
       )}
     >
       {connectedToPrev || connectedToNext ? (
@@ -98,7 +99,14 @@ export function ExerciseRow({
                 </div>
               )}
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">{exercise.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-medium text-white">{exercise.name}</p>
+                  {exercise.hidden ? (
+                    <span className="shrink-0 rounded-full border border-[var(--border-strong)] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-400">
+                      Oculto
+                    </span>
+                  ) : null}
+                </div>
                 {exercise.muscleGroup ? (
                   <p className="text-xs text-slate-400">{exercise.muscleGroup}</p>
                 ) : null}
