@@ -20,17 +20,13 @@ export function Avatar({
 }) {
   if (photoUrl) {
     return (
-      // A real <img> (vs. a CSS background) loads/crops more reliably when
-      // this gets captured into an exported image (share cards): html-to-image
-      // clones <img> elements directly, but has known issues re-embedding
-      // background-image + background-size, which can drop or distort it.
+      // A real <img> (vs. a CSS background) crops more predictably with
+      // object-cover. No crossOrigin here — that forces a strict CORS-mode
+      // fetch, which the Firebase Storage bucket (no CORS config) then
+      // blocks outright, breaking the image everywhere, not just for canvas
+      // export (which no longer uses this photo anyway).
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={name}
-        crossOrigin="anonymous"
-        className={cn("object-cover", className)}
-      />
+      <img src={photoUrl} alt={name} className={cn("object-cover", className)} />
     );
   }
 

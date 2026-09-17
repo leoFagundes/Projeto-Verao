@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://projeto-verao.vercel.app", "http://localhost:3000"],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type"]
+  }
+]
