@@ -1,8 +1,11 @@
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -10,7 +13,8 @@ import {
 } from "firebase/firestore";
 
 import { generateId } from "@/lib/utils";
-import type { Exercise, Workout, WorkoutInput } from "@/types/workout";
+import { mergeLinkedExercises, type PersonalExerciseField } from "@/lib/workout-sync";
+import type { Exercise, Workout, WorkoutInput, WorkoutLinkRef } from "@/types/workout";
 
 import { db } from "./client";
 
@@ -62,14 +66,16 @@ export function subscribeWorkouts(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<Workout, "id" | "exercises"> & {
+          const data = docSnap.data() as Omit<Workout, "id" | "exercises" | "linkedWorkouts"> & {
             exercises: Record<string, unknown>[];
+            linkedWorkouts?: WorkoutLinkRef[];
           };
           return {
             id: docSnap.id,
             ...data,
             category: data.category ?? null,
             exercises: data.exercises.map(normalizeStoredExercise),
+            linkedWorkouts: data.linkedWorkouts ?? [],
           };
         }),
       );
@@ -100,6 +106,7 @@ export async function createWorkout(profileId: string, input: WorkoutInput) {
     createdAt: now,
     updatedAt: now,
     lastPerformedAt: null,
+    linkedWorkouts: [],
   });
   return docRef.id;
 }
@@ -115,6 +122,65 @@ export async function updateWorkout(
     exercises: normalizeExercises(input.exercises),
     updatedAt: Date.now(),
   });
+}
+
+/** Saves an edit, always syncing the workout's structure (which exercises,
+ * their order, name/category) to every linked profile, while each of their
+ * personal prescription fields (sets/reps/weight/rest/notes/duration) is only
+ * overwritten for the categories listed in `syncFields` — anything else stays
+ * exactly as that profile already had it. */
+export async function propagateWorkoutEdit(
+  profileId: string,
+  workoutId: string,
+  input: WorkoutInput,
+  linkedWorkouts: WorkoutLinkRef[],
+  syncFields: Set<PersonalExerciseField>,
+) {
+  const sourceExercises = normalizeExercises(input.exercises) as Exercise[];
+  await updateWorkout(profileId, workoutId, input);
+
+  await Promise.all(
+    linkedWorkouts.map(async (ref) => {
+      try {
+        const targetDoc = doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId);
+        const targetSnap = await getDoc(targetDoc);
+        if (!targetSnap.exists()) return;
+        const targetData = targetSnap.data() as { exercises?: Record<string, unknown>[] };
+        const targetExercises = (targetData.exercises ?? []).map(normalizeStoredExercise);
+        const mergedExercises = mergeLinkedExercises(sourceExercises, targetExercises, syncFields);
+
+        await updateWorkout(ref.profileId, ref.workoutId, {
+          name: input.name,
+          category: input.category,
+          exercises: mergedExercises,
+        });
+      } catch {
+        // Best-effort — one unreachable linked profile shouldn't block the rest.
+      }
+    }),
+  );
+}
+
+/** Saves an edit only to this profile's copy and leaves the link group —
+ * every other member keeps their link to each other, just not to this one. */
+export async function updateWorkoutAndUnlink(
+  profileId: string,
+  workoutId: string,
+  input: WorkoutInput,
+  linkedWorkouts: WorkoutLinkRef[],
+) {
+  await updateWorkout(profileId, workoutId, input);
+  await updateDoc(doc(requireDb(), "profiles", profileId, "workouts", workoutId), {
+    linkedWorkouts: [],
+  });
+  const myRef: WorkoutLinkRef = { profileId, workoutId };
+  await Promise.all(
+    linkedWorkouts.map((ref) =>
+      updateDoc(doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId), {
+        linkedWorkouts: arrayRemove(myRef),
+      }).catch(() => {}),
+    ),
+  );
 }
 
 export async function touchWorkoutPerformed(profileId: string, workoutId: string) {
@@ -143,15 +209,51 @@ export async function copyWorkout(
   sourceProfileId: string,
   targetProfileId: string,
   workout: Workout,
+  options?: { linked?: boolean },
 ) {
   const sameProfile = sourceProfileId === targetProfileId;
-  return createWorkout(targetProfileId, {
+  const linked = Boolean(options?.linked) && !sameProfile;
+
+  const newWorkoutId = await createWorkout(targetProfileId, {
     name: sameProfile ? `${workout.name} (cópia)` : workout.name,
     category: workout.category,
     exercises: workout.exercises,
   });
+
+  if (linked) {
+    // The new copy joins the whole existing group (the source plus whoever it was already linked to).
+    const group: WorkoutLinkRef[] = [
+      { profileId: sourceProfileId, workoutId: workout.id },
+      ...workout.linkedWorkouts,
+    ];
+    await updateDoc(doc(requireDb(), "profiles", targetProfileId, "workouts", newWorkoutId), {
+      linkedWorkouts: group,
+    });
+
+    // Every existing group member gains a reference back to the new copy.
+    const newRef: WorkoutLinkRef = { profileId: targetProfileId, workoutId: newWorkoutId };
+    await Promise.all(
+      group.map((ref) =>
+        updateDoc(doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId), {
+          linkedWorkouts: arrayUnion(newRef),
+        }).catch(() => {}),
+      ),
+    );
+  }
+
+  return newWorkoutId;
 }
 
-export async function deleteWorkout(profileId: string, workoutId: string) {
-  await deleteDoc(doc(requireDb(), "profiles", profileId, "workouts", workoutId));
+export async function deleteWorkout(profileId: string, workout: Workout) {
+  if (workout.linkedWorkouts.length > 0) {
+    const myRef: WorkoutLinkRef = { profileId, workoutId: workout.id };
+    await Promise.all(
+      workout.linkedWorkouts.map((ref) =>
+        updateDoc(doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId), {
+          linkedWorkouts: arrayRemove(myRef),
+        }).catch(() => {}),
+      ),
+    );
+  }
+  await deleteDoc(doc(requireDb(), "profiles", profileId, "workouts", workout.id));
 }

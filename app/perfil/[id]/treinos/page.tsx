@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { deleteActiveSession } from "@/lib/firebase/active-sessions";
 import { useActiveSessions } from "@/lib/hooks/use-active-sessions";
+import { useProfile } from "@/lib/hooks/use-profile";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { useWorkouts } from "@/lib/hooks/use-workouts";
 import { formatDateLong } from "@/lib/utils";
@@ -23,6 +24,7 @@ export default function WorkoutsPage() {
   const params = useParams<{ id: string }>();
   const { workouts, loading } = useWorkouts(params.id);
   const { sessions } = useSessions(params.id);
+  const { profile } = useProfile(params.id);
   const allSessions = useMemo(() => [...sessions].sort((a, b) => b.date - a.date), [sessions]);
   const [search, setSearch] = useState("");
   const sortedWorkouts = useMemo(
@@ -149,7 +151,7 @@ export default function WorkoutsPage() {
           <SectionLabel>Histórico</SectionLabel>
           <h3 className="mt-1 text-lg font-semibold text-white">Treinos realizados</h3>
           <div className="mt-4">
-            <SessionHistoryList profileId={params.id} sessions={allSessions} showWorkoutName />
+            <SessionHistoryList profileId={params.id} profile={profile} sessions={allSessions} showWorkoutName />
           </div>
         </Card>
       ) : null}

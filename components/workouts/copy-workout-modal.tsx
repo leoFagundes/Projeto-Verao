@@ -9,6 +9,8 @@ import { copyWorkout } from "@/lib/firebase/workouts";
 import { useProfiles } from "@/lib/hooks/use-profiles";
 import type { Workout } from "@/types/workout";
 
+import { LinkToggle } from "./link-toggle";
+
 export function CopyWorkoutModal({
   open,
   onClose,
@@ -24,13 +26,14 @@ export function CopyWorkoutModal({
 }) {
   const { profiles } = useProfiles();
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [linked, setLinked] = useState(true);
 
   async function handleCopy(targetProfileId: string, targetName: string) {
     if (copyingId) return;
     setCopyingId(targetProfileId);
     try {
-      const newId = await copyWorkout(profileId, targetProfileId, workout);
       const sameProfile = targetProfileId === profileId;
+      const newId = await copyWorkout(profileId, targetProfileId, workout, { linked: linked && !sameProfile });
       toast.success(sameProfile ? "Treino duplicado!" : `Treino copiado para ${targetName}!`);
       onCopied(targetProfileId, newId);
       onClose();
@@ -46,6 +49,9 @@ export function CopyWorkoutModal({
   return (
     <Modal open={open} onClose={onClose} title={`Copiar "${workout.name}"`}>
       <p className="text-sm text-slate-400">Escolha para qual perfil copiar este treino.</p>
+
+      <LinkToggle checked={linked} onChange={setLinked} />
+
       <div className="mt-4 space-y-2">
         {ordered.map((profile) => {
           const isSelf = profile.id === profileId;

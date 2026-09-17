@@ -1,6 +1,7 @@
 "use client";
 
 import { AppHeader } from "@/components/layout/app-header";
+import { ProfileCompare } from "@/components/profile/profile-compare";
 import { ProfileSummaryCard } from "@/components/profile/profile-summary-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useProfiles } from "@/lib/hooks/use-profiles";
@@ -38,6 +39,8 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        {!loading && profiles.length >= 2 ? <ProfileCompare profiles={profiles} /> : null}
       </div>
     </main>
   );

@@ -39,6 +39,9 @@ export type Exercise = {
 
 export type ExerciseInput = Omit<Exercise, "id"> & { id?: string };
 
+/** Points at one other profile's copy of a linked workout. */
+export type WorkoutLinkRef = { profileId: string; workoutId: string };
+
 export type Workout = {
   id: string;
   name: string;
@@ -48,6 +51,8 @@ export type Workout = {
   createdAt: number;
   updatedAt: number;
   lastPerformedAt: number | null;
+  /** Other profiles' copies of this same workout — editing here can optionally propagate to all of them. */
+  linkedWorkouts: WorkoutLinkRef[];
 };
 
 export type WorkoutInput = {

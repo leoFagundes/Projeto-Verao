@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
@@ -10,6 +11,15 @@ import type { Profile } from "@/types/profile";
 
 import { BottomNav, TopTabs } from "./bottom-nav";
 
+/** Top-level tab roots — landing on one of these directly means "back" should
+ * leave the profile entirely; landing deeper (a workout detail, "novo", etc.)
+ * means "back" should return to that tab's list instead of jumping to home. */
+function backTarget(pathname: string, profileId: string) {
+  const prefix = `/perfil/${profileId}`;
+  const rest = pathname.slice(prefix.length).split("/").filter(Boolean);
+  return rest.length > 1 ? `${prefix}/${rest[0]}` : "/";
+}
+
 export function ProfileShell({
   profile,
   children,
@@ -18,6 +28,9 @@ export function ProfileShell({
   children: ReactNode;
 }) {
   const theme = THEME_META[profile.theme];
+  const pathname = usePathname();
+  const backHref = backTarget(pathname, profile.id);
+  const backLabel = backHref === "/" ? "Voltar para a home" : "Voltar";
 
   useEffect(() => {
     // Modals/toasts portal to document.body, outside this div, so CSS
@@ -39,9 +52,9 @@ export function ProfileShell({
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <Link
-                href="/"
+                href={backHref}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-lg font-bold text-white transition hover:border-[var(--accent)]"
-                aria-label="Voltar para a home"
+                aria-label={backLabel}
               >
                 ←
               </Link>

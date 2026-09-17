@@ -7,16 +7,19 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { deleteSession } from "@/lib/firebase/sessions";
 import { formatDateLong, formatDuration } from "@/lib/utils";
+import type { Profile } from "@/types/profile";
 import type { WorkoutSession } from "@/types/session";
 
 import { WorkoutShareModal } from "./workout-share-modal";
 
 export function SessionHistoryList({
   profileId,
+  profile,
   sessions,
   showWorkoutName = false,
 }: {
   profileId: string;
+  profile?: Profile | null;
   sessions: WorkoutSession[];
   showWorkoutName?: boolean;
 }) {
@@ -89,7 +92,7 @@ export function SessionHistoryList({
         }}
       />
 
-      <WorkoutShareModal session={sharing} open={sharing !== null} onClose={() => setSharing(null)} />
+      <WorkoutShareModal session={sharing} profile={profile} open={sharing !== null} onClose={() => setSharing(null)} />
     </div>
   );
 }

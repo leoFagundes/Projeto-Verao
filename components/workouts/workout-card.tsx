@@ -1,13 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Info, Link2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { formatDate } from "@/lib/utils";
 import type { Workout } from "@/types/workout";
 
+import { WorkoutDetailsModal } from "./workout-details-modal";
+
 export function WorkoutCard({ workout, profileId, index }: { workout: Workout; profileId: string; index: number }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const activeCount = workout.exercises.filter((exercise) => !exercise.hidden).length;
   const hiddenCount = workout.exercises.length - activeCount;
 
@@ -29,17 +33,42 @@ export function WorkoutCard({ workout, profileId, index }: { workout: Workout; p
               {hiddenCount > 0 ? ` · ${hiddenCount} oculto${hiddenCount === 1 ? "" : "s"}` : ""}
             </p>
           </div>
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
-            <Dumbbell className="h-6 w-6" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                setDetailsOpen(true);
+              }}
+              className="grid h-9 w-9 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-slate-400 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              aria-label="Ver detalhes do treino"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--accent)]">
+              <Dumbbell className="h-6 w-6" />
+            </div>
           </div>
         </div>
 
-        <p className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-500">
-          {workout.lastPerformedAt
-            ? `Último treino: ${formatDate(workout.lastPerformedAt)}`
-            : "Ainda não realizado"}
-        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            {workout.lastPerformedAt
+              ? `Último treino: ${formatDate(workout.lastPerformedAt)}`
+              : "Ainda não realizado"}
+          </p>
+          {workout.linkedWorkouts.length > 0 ? (
+            <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+              <Link2 className="h-3 w-3" />
+              {workout.linkedWorkouts.length === 1 ? "1 vínculo" : `${workout.linkedWorkouts.length} vínculos`}
+            </span>
+          ) : null}
+        </div>
       </Link>
+
+      {detailsOpen ? (
+        <WorkoutDetailsModal workout={workout} profileId={profileId} onClose={() => setDetailsOpen(false)} />
+      ) : null}
     </motion.div>
   );
 }

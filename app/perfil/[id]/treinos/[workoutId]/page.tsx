@@ -1,20 +1,25 @@
 "use client";
 
+import { Link2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ExerciseProgressionChart } from "@/components/charts/exercise-progression-chart";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyWorkoutModal } from "@/components/workouts/copy-workout-modal";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
+import { LinkEditChoiceModal } from "@/components/workouts/link-edit-choice-modal";
 import { PerformWorkoutModal } from "@/components/workouts/perform-workout-modal";
 import { SessionHistoryList } from "@/components/workouts/session-history-list";
 import { WorkoutForm } from "@/components/workouts/workout-form";
-import { deleteWorkout, setExerciseHidden, updateWorkout } from "@/lib/firebase/workouts";
+import { deleteWorkout, propagateWorkoutEdit, setExerciseHidden, updateWorkout, updateWorkoutAndUnlink } from "@/lib/firebase/workouts";
+import { useProfile } from "@/lib/hooks/use-profile";
+import { useProfiles } from "@/lib/hooks/use-profiles";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { useWorkouts } from "@/lib/hooks/use-workouts";
 import {
@@ -24,6 +29,7 @@ import {
   exerciseProgression,
 } from "@/lib/stats";
 import { formatClock, formatDate } from "@/lib/utils";
+import type { PersonalExerciseField } from "@/lib/workout-sync";
 import type { Exercise, WorkoutInput } from "@/types/workout";
 
 export default function WorkoutDetailPage() {
@@ -31,6 +37,8 @@ export default function WorkoutDetailPage() {
   const router = useRouter();
   const { workouts, loading } = useWorkouts(params.id);
   const { sessions } = useSessions(params.id);
+  const { profiles } = useProfiles();
+  const { profile } = useProfile(params.id);
 
   const [editing, setEditing] = useState(false);
   const [performOpen, setPerformOpen] = useState(false);
@@ -38,6 +46,7 @@ export default function WorkoutDetailPage() {
   const [copyOpen, setCopyOpen] = useState(false);
   const [viewingImages, setViewingImages] = useState<Exercise | null>(null);
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<WorkoutInput | null>(null);
 
   const workout = useMemo(
     () => workouts.find((item) => item.id === params.workoutId) ?? null,
@@ -53,12 +62,40 @@ export default function WorkoutDetailPage() {
   const hiddenExercises = workout?.exercises.filter((exercise) => exercise.hidden) ?? [];
 
   async function handleUpdate(values: WorkoutInput) {
+    if (workout && workout.linkedWorkouts.length > 0) {
+      setPendingEdit(values);
+      return;
+    }
     try {
       await updateWorkout(params.id, params.workoutId, values);
       toast.success("Treino atualizado!");
       setEditing(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível atualizar.");
+    }
+  }
+
+  async function handleSync(syncFields: Set<PersonalExerciseField>) {
+    if (!workout || !pendingEdit) return;
+    try {
+      await propagateWorkoutEdit(params.id, params.workoutId, pendingEdit, workout.linkedWorkouts, syncFields);
+      toast.success("Treino atualizado e sincronizado com os perfis vinculados!");
+      setPendingEdit(null);
+      setEditing(false);
+    } catch {
+      toast.error("Não foi possível sincronizar com todos os perfis vinculados.");
+    }
+  }
+
+  async function handleUnlinkAndSave() {
+    if (!workout || !pendingEdit) return;
+    try {
+      await updateWorkoutAndUnlink(params.id, params.workoutId, pendingEdit, workout.linkedWorkouts);
+      toast.success("Treino atualizado só neste perfil — vínculo desfeito.");
+      setPendingEdit(null);
+      setEditing(false);
+    } catch {
+      toast.error("Não foi possível atualizar o treino.");
     }
   }
 
@@ -85,11 +122,30 @@ export default function WorkoutDetailPage() {
   }
 
   if (editing) {
+    const linkedProfiles = workout.linkedWorkouts
+      .map((ref) => profiles.find((profile) => profile.id === ref.profileId))
+      .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
+
     return (
       <div>
         <SectionLabel>Editar treino</SectionLabel>
         <h2 className="mt-2 text-2xl font-semibold text-white">{workout.name}</h2>
-        <Card className="mt-6 p-5 sm:p-6">
+
+        {linkedProfiles.length > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-4 py-2.5 text-xs text-slate-200">
+            <Link2 className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+            <span className="font-medium text-[var(--accent)]">Vinculado com:</span>
+            {linkedProfiles.map((profile) => (
+              <span key={profile.id} className="flex items-center gap-1 rounded-full bg-[var(--surface)] py-0.5 pl-0.5 pr-2 text-xs">
+                <Avatar name={profile.name} photoUrl={profile.photoUrl} className="h-4 w-4 rounded-full" textClassName="text-[8px]" />
+                {profile.name}
+              </span>
+            ))}
+            <span className="text-slate-400">— exercícios e ordem sincronizam sempre; carga, reps etc. você escolhe ao salvar.</span>
+          </div>
+        ) : null}
+
+        <Card className="mt-4 p-5 sm:p-6">
           <WorkoutForm
             initialValues={{ name: workout.name, category: workout.category, exercises: workout.exercises }}
             submitLabel="Salvar alterações"
@@ -97,6 +153,15 @@ export default function WorkoutDetailPage() {
             onCancel={() => setEditing(false)}
           />
         </Card>
+
+        <LinkEditChoiceModal
+          open={pendingEdit !== null}
+          workoutId={params.workoutId}
+          linkedProfiles={linkedProfiles}
+          onClose={() => setPendingEdit(null)}
+          onSync={handleSync}
+          onUnlinkAndSave={handleUnlinkAndSave}
+        />
       </div>
     );
   }
@@ -112,6 +177,27 @@ export default function WorkoutDetailPage() {
               ? `Última vez: ${formatDate(workout.lastPerformedAt)}`
               : "Ainda não realizado"}
           </p>
+          {workout.linkedWorkouts.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="flex items-center gap-1 text-xs font-medium text-[var(--accent)]">
+                <Link2 className="h-3.5 w-3.5" />
+                Vinculado com:
+              </span>
+              {workout.linkedWorkouts.map((ref) => {
+                const linkedProfile = profiles.find((profile) => profile.id === ref.profileId);
+                if (!linkedProfile) return null;
+                return (
+                  <span
+                    key={ref.profileId}
+                    className="flex items-center gap-1 rounded-full bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 text-xs text-slate-200"
+                  >
+                    <Avatar name={linkedProfile.name} photoUrl={linkedProfile.photoUrl} className="h-4 w-4 rounded-full" textClassName="text-[8px]" />
+                    {linkedProfile.name}
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setPerformOpen(true)}>Realizar treino</Button>
@@ -288,7 +374,7 @@ export default function WorkoutDetailPage() {
         <SectionLabel>Histórico</SectionLabel>
         <h3 className="mt-1 text-lg font-semibold text-white">Sessões realizadas</h3>
         <div className="mt-4">
-          <SessionHistoryList profileId={params.id} sessions={workoutSessions} />
+          <SessionHistoryList profileId={params.id} profile={profile} sessions={workoutSessions} />
         </div>
       </Card>
 
@@ -331,7 +417,8 @@ export default function WorkoutDetailPage() {
         danger
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => {
-          deleteWorkout(params.id, params.workoutId)
+          if (!workout) return;
+          deleteWorkout(params.id, workout)
             .then(() => {
               toast.success("Treino excluído.");
               router.push(`/perfil/${params.id}/treinos`);

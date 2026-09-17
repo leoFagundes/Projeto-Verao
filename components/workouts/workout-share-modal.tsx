@@ -6,16 +6,19 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import type { Profile } from "@/types/profile";
 import type { WorkoutSession } from "@/types/session";
 
 import { WorkoutShareCard } from "./workout-share-card";
 
 export function WorkoutShareModal({
   session,
+  profile,
   open,
   onClose,
 }: {
   session: WorkoutSession | null;
+  profile?: Profile | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -62,7 +65,7 @@ export function WorkoutShareModal({
     <Modal open={open} onClose={onClose} title="Compartilhar treino">
       <div className="flex justify-center overflow-x-auto rounded-2xl bg-[var(--field-bg)] p-3 sm:p-4">
         <div ref={cardRef}>
-          <WorkoutShareCard session={session} />
+          <WorkoutShareCard session={session} profile={profile} />
         </div>
       </div>
 
