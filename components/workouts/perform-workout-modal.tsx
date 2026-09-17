@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Info } from "lucide-react";
+import { Clock, Info } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,7 +28,7 @@ import type { Workout } from "@/types/workout";
 
 import { ExerciseInfoModal } from "./exercise-info-modal";
 import { RestTimer } from "./rest-timer";
-import { SetTimer } from "./set-timer";
+import { SetTimerModal } from "./set-timer-modal";
 
 const TIMER_PREF_KEY = "projeto-verao-rest-timer-enabled";
 const AUTOSAVE_DELAY_MS = 900;
@@ -40,8 +40,10 @@ function visibleExercises(workout: Workout) {
 function buildInitialLogs(workout: Workout, sessions: WorkoutSession[]): SessionExerciseLog[] {
   return visibleExercises(workout).map((exercise) => {
     const lastWeight = lastWeightForExercise(sessions, exercise.exerciseId);
-    const weight = lastWeight ?? exercise.weight;
+    const weight = exercise.trackWeight ? lastWeight ?? exercise.weight : null;
     const lastDuration = lastDurationForExercise(sessions, exercise.exerciseId);
+    // Same convention as weight: prefill with the last time actually held, or
+    // fall back to the plan's target — editable either way before marking done.
     const durationSeconds = exercise.measureType === "time" ? lastDuration ?? exercise.durationSeconds ?? 0 : null;
     const sets: SetLog[] = Array.from({ length: Math.max(exercise.sets, 1) }, () => ({
       reps: exercise.reps,
@@ -113,6 +115,7 @@ export function PerformWorkoutModal({
   const [step, setStep] = useState<"exercises" | "summary">("exercises");
   const [viewingInfoFor, setViewingInfoFor] = useState<string | null>(null);
   const [shareWithProfileIds, setShareWithProfileIds] = useState<string[]>([]);
+  const [activeTimer, setActiveTimer] = useState<{ logId: string; setIndex: number } | null>(null);
   const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
@@ -556,70 +559,104 @@ export function PerformWorkoutModal({
                         ) : null}
 
                         <div className="space-y-2">
-                          <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1.5rem] items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                            <span />
-                            <span>{source?.measureType === "time" ? "Tempo" : "Reps"}</span>
-                            <span>Carga (kg)</span>
-                            <span className="text-center">OK</span>
-                            <span />
-                          </div>
-                          {log.sets.map((set, index) => (
-                            <div
-                              key={index}
-                              className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1.5rem] items-center gap-2"
-                            >
-                              <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)] text-xs font-medium text-slate-300">
-                                {index + 1}
-                              </span>
-                              {source?.measureType === "time" ? (
-                                <SetTimer
-                                  seconds={set.durationSeconds ?? 0}
-                                  onChange={(seconds) => updateSet(log.id, index, { durationSeconds: seconds })}
-                                />
-                              ) : (
-                                <input
-                                  value={set.reps}
-                                  onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
-                                  placeholder="Reps"
-                                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
-                                />
-                              )}
-                              <input
-                                type="number"
-                                step="0.5"
-                                value={set.weight ?? ""}
-                                onChange={(event) =>
-                                  updateSet(log.id, index, {
-                                    weight: event.target.value === "" ? null : Number(event.target.value),
-                                  })
-                                }
-                                placeholder="Kg"
-                                className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => updateSet(log.id, index, { done: !set.done })}
-                                aria-pressed={set.done}
-                                aria-label={set.done ? "Marcar série como não concluída" : "Marcar série como concluída"}
-                                className="grid h-7 w-7 place-items-center justify-self-center rounded-full border-2 text-sm font-bold transition"
-                                style={
-                                  set.done
-                                    ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
-                                    : { borderColor: "var(--border-strong)", color: "transparent" }
-                                }
-                              >
-                                ✓
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeSet(log.id, index)}
-                                className="justify-self-center text-sm text-slate-500 hover:text-red-300"
-                                aria-label="Remover série"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
+                          {(() => {
+                            const isTimeBased = source?.measureType === "time";
+                            const showWeight = source?.trackWeight !== false;
+                            const gridColsClass = showWeight
+                              ? "grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1.5rem]"
+                              : "grid-cols-[1.75rem_minmax(0,1fr)_2.25rem_1.5rem]";
+
+                            return (
+                              <>
+                                <div
+                                  className={cn(
+                                    "grid items-center gap-2 px-1 text-[10px] uppercase tracking-[0.15em] text-slate-500",
+                                    gridColsClass,
+                                  )}
+                                >
+                                  <span />
+                                  <span>{isTimeBased ? "Tempo" : "Reps"}</span>
+                                  {showWeight ? <span>Carga (kg)</span> : null}
+                                  <span className="text-center">OK</span>
+                                  <span />
+                                </div>
+                                {log.sets.map((set, index) => (
+                                  <div key={index} className={cn("grid items-center gap-2", gridColsClass)}>
+                                    <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)] text-xs font-medium text-slate-300">
+                                      {index + 1}
+                                    </span>
+                                    {isTimeBased ? (
+                                      <div className="flex min-w-0 items-center gap-1.5">
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={set.durationSeconds ?? ""}
+                                          onChange={(event) =>
+                                            updateSet(log.id, index, {
+                                              durationSeconds: event.target.value === "" ? 0 : Number(event.target.value),
+                                            })
+                                          }
+                                          placeholder="Seg."
+                                          className="w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveTimer({ logId: log.id, setIndex: index })}
+                                          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--field-bg)] text-[var(--accent)] transition hover:border-[var(--accent)]"
+                                          aria-label="Abrir cronômetro"
+                                        >
+                                          <Clock className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <input
+                                        value={set.reps}
+                                        onChange={(event) => updateSet(log.id, index, { reps: event.target.value })}
+                                        placeholder="Reps"
+                                        className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                                      />
+                                    )}
+                                    {showWeight ? (
+                                      <input
+                                        type="number"
+                                        step="0.5"
+                                        value={set.weight ?? ""}
+                                        onChange={(event) =>
+                                          updateSet(log.id, index, {
+                                            weight: event.target.value === "" ? null : Number(event.target.value),
+                                          })
+                                        }
+                                        placeholder="Kg"
+                                        className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-bg)] px-2 py-2 text-center text-sm text-white outline-none focus:border-[var(--accent)]"
+                                      />
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() => updateSet(log.id, index, { done: !set.done })}
+                                      aria-pressed={set.done}
+                                      aria-label={set.done ? "Marcar série como não concluída" : "Marcar série como concluída"}
+                                      className="grid h-7 w-7 place-items-center justify-self-center rounded-full border-2 text-sm font-bold transition"
+                                      style={
+                                        set.done
+                                          ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
+                                          : { borderColor: "var(--border-strong)", color: "transparent" }
+                                      }
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSet(log.id, index)}
+                                      className="justify-self-center text-sm text-slate-500 hover:text-red-300"
+                                      aria-label="Remover série"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -772,6 +809,23 @@ export function PerformWorkoutModal({
         open={viewingInfoFor !== null}
         onClose={() => setViewingInfoFor(null)}
       />
+
+      {activeTimer
+        ? (() => {
+            const log = exerciseLogs.find((item) => item.id === activeTimer.logId);
+            const set = log?.sets[activeTimer.setIndex];
+            if (!log || !set) return null;
+            return (
+              <SetTimerModal
+                open
+                exerciseName={log.name}
+                setLabel={`Série ${activeTimer.setIndex + 1} de ${log.sets.length}`}
+                targetSeconds={set.durationSeconds ?? 0}
+                onClose={() => setActiveTimer(null)}
+              />
+            );
+          })()
+        : null}
 
       <ConfirmDialog
         open={confirmReset}

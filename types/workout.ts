@@ -26,6 +26,8 @@ export type Exercise = {
   durationSeconds: number | null;
   /** Whether this exercise is tracked by reps or by a timed hold/interval. */
   measureType: MeasureType;
+  /** Whether load tracking applies to this exercise at all (off for things like planks). Defaults to true. */
+  trackWeight: boolean;
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;

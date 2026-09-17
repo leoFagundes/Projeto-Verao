@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 import type { Achievement } from "@/lib/achievements";
+import { playSound } from "@/lib/sound";
 
 export function AchievementUnlockModal({
   achievements,
@@ -18,6 +19,8 @@ export function AchievementUnlockModal({
 }) {
   useEffect(() => {
     if (!open) return;
+
+    playSound("/sounds/tada.mp3", 0.35);
 
     const styles = getComputedStyle(document.documentElement);
     const accent = styles.getPropertyValue("--accent").trim() || "#818cf8";

@@ -42,6 +42,7 @@ function normalizeStoredExercise(exercise: Record<string, unknown>): Exercise {
     reps: exercise.reps as string,
     durationSeconds: (exercise.durationSeconds as number | null) ?? null,
     measureType: (exercise.measureType as Exercise["measureType"]) ?? "reps",
+    trackWeight: (exercise.trackWeight as boolean | undefined) ?? true,
     weight: (exercise.weight as number | null) ?? null,
     restSeconds: (exercise.restSeconds as number | null) ?? null,
     muscleGroup: (exercise.muscleGroup as Exercise["muscleGroup"]) ?? null,
@@ -96,6 +97,7 @@ function normalizeExercises(exercises: WorkoutInput["exercises"]) {
     linkedToNext: exercise.linkedToNext ?? false,
     measureType: exercise.measureType ?? "reps",
     durationSeconds: exercise.durationSeconds ?? null,
+    trackWeight: exercise.trackWeight ?? true,
   }));
 }
 

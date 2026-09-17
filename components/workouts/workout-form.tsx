@@ -22,6 +22,7 @@ function exerciseFromDef(def: ExerciseDef): FormExercise {
     reps: "10-12",
     durationSeconds: null,
     measureType: "reps",
+    trackWeight: true,
     weight: null,
     restSeconds: 60,
     muscleGroup: def.muscleGroup,

@@ -17,6 +17,7 @@ export type FormExercise = {
   reps: string;
   durationSeconds: number | null;
   measureType: MeasureType;
+  trackWeight: boolean;
   weight: number | null;
   restSeconds: number | null;
   muscleGroup: MuscleGroup | null;
@@ -155,7 +156,7 @@ export function ExerciseRow({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className={cn("grid grid-cols-2 gap-3", exercise.trackWeight ? "sm:grid-cols-4" : "sm:grid-cols-3")}>
             <Field label="Séries">
               <Input
                 type="number"
@@ -187,18 +188,20 @@ export function ExerciseRow({
                 />
               </Field>
             )}
-            <Field label="Carga (kg)">
-              <Input
-                type="number"
-                min={0}
-                step="0.5"
-                value={exercise.weight ?? ""}
-                onChange={(event) =>
-                  onChange({ weight: event.target.value === "" ? null : Number(event.target.value) })
-                }
-                placeholder="Opcional"
-              />
-            </Field>
+            {exercise.trackWeight ? (
+              <Field label="Carga (kg)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={exercise.weight ?? ""}
+                  onChange={(event) =>
+                    onChange({ weight: event.target.value === "" ? null : Number(event.target.value) })
+                  }
+                  placeholder="Opcional"
+                />
+              </Field>
+            ) : null}
             <Field label="Descanso (s)">
               <Input
                 type="number"
@@ -213,6 +216,26 @@ export function ExerciseRow({
               />
             </Field>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onChange({ trackWeight: !exercise.trackWeight, weight: exercise.trackWeight ? null : exercise.weight })}
+            className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200"
+          >
+            <span
+              role="switch"
+              aria-checked={exercise.trackWeight}
+              className="relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-200"
+              style={{ backgroundColor: exercise.trackWeight ? "var(--accent)" : "var(--field-bg)" }}
+            >
+              <span
+                aria-hidden="true"
+                className="inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-200"
+                style={{ transform: exercise.trackWeight ? "translateX(13px)" : "translateX(2px)" }}
+              />
+            </span>
+            Registrar carga neste exercício
+          </button>
 
           <Field label="Notas do treino">
             <Textarea
