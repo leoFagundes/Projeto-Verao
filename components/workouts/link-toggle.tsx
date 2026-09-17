@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SEEN_KEY = "projeto-verao-link-toggle-seen";
@@ -65,7 +66,7 @@ export function LinkToggle({ checked, onChange }: { checked: boolean; onChange: 
             className="shrink-0 text-slate-400 hover:text-white"
             aria-label="Entendi, não mostrar de novo"
           >
-            ✕
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       ) : null}

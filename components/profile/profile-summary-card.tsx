@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Trophy } from "lucide-react";
 import { useMemo } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -75,8 +76,9 @@ export function ProfileSummaryCard({ profile, index }: { profile: Profile; index
 
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-white">
-                🏆 {unlocked.size}/{ACHIEVEMENTS.length} conquistas
+              <span className="inline-flex items-center gap-1 font-medium text-white">
+                <Trophy className="h-3.5 w-3.5" style={{ color: "var(--accent)" }} />
+                {unlocked.size}/{ACHIEVEMENTS.length} conquistas
               </span>
               <span className="text-slate-500">{Math.round(pct)}%</span>
             </div>
@@ -94,10 +96,10 @@ export function ProfileSummaryCard({ profile, index }: { profile: Profile; index
                 <span
                   key={achievement.id}
                   title={achievement.title}
-                  className="grid h-7 w-7 place-items-center rounded-full text-sm"
+                  className="grid h-7 w-7 place-items-center rounded-full"
                   style={{ background: "var(--accent-soft)" }}
                 >
-                  {achievement.icon}
+                  <achievement.icon className="h-3.5 w-3.5" style={{ color: "var(--accent)" }} />
                 </span>
               ))}
             </div>

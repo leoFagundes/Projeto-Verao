@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy } from "lucide-react";
+import { Settings, Trophy } from "lucide-react";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/layout/app-header";
@@ -29,10 +29,10 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/admin"
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-lg text-white transition hover:border-[var(--accent)]"
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
                 aria-label="Administrar perfis"
               >
-                ⚙️
+                <Settings className="h-5 w-5" />
               </Link>
             </div>
           }

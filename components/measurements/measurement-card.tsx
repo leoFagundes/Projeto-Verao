@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Check, Scale } from "lucide-react";
 
 import { cn, formatDate } from "@/lib/utils";
 import { MEASUREMENT_FIELDS } from "@/types/measurement";
@@ -42,7 +43,7 @@ export function MeasurementCard({
                 : { borderColor: "var(--border-strong)", color: "transparent" }
             }
           >
-            ✓
+            <Check className="h-3.5 w-3.5" />
           </span>
         ) : null}
         {cover ? (
@@ -64,7 +65,7 @@ export function MeasurementCard({
             className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-lg text-slate-950"
             style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
           >
-            ⚖️
+            <Scale className="h-5 w-5" />
           </div>
         )}
         <div className="min-w-0">

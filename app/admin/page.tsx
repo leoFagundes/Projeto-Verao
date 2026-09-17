@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AdminGate } from "@/components/layout/admin-gate";
 import { AdminTabs } from "@/components/layout/admin-tabs";
 import { AppHeader } from "@/components/layout/app-header";
+import { PasswordConfirmModal } from "@/components/profile/password-confirm-modal";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,35 @@ function AdminContent() {
   const { profiles, loading } = useProfiles();
   const [editing, setEditing] = useState<Profile | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Profile | null>(null);
+  const [passwordPrompt, setPasswordPrompt] = useState<{ profile: Profile; action: "edit" | "delete" } | null>(
+    null,
+  );
+
+  function requestEdit(profile: Profile) {
+    if (profile.password) {
+      setPasswordPrompt({ profile, action: "edit" });
+    } else {
+      setEditing(profile);
+    }
+  }
+
+  function requestDelete(profile: Profile) {
+    if (profile.password) {
+      setPasswordPrompt({ profile, action: "delete" });
+    } else {
+      setPendingDelete(profile);
+    }
+  }
+
+  function handlePasswordConfirmed() {
+    if (!passwordPrompt) return;
+    if (passwordPrompt.action === "edit") {
+      setEditing(passwordPrompt.profile);
+    } else {
+      setPendingDelete(passwordPrompt.profile);
+    }
+    setPasswordPrompt(null);
+  }
 
   async function handleCreate(values: ProfileInput) {
     try {
@@ -98,10 +128,10 @@ function AdminContent() {
                     </div>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => setEditing(profile)}>
+                    <Button variant="secondary" size="sm" onClick={() => requestEdit(profile)}>
                       Editar
                     </Button>
-                    <Button variant="danger" size="sm" onClick={() => setPendingDelete(profile)}>
+                    <Button variant="danger" size="sm" onClick={() => requestDelete(profile)}>
                       Remover
                     </Button>
                   </div>
@@ -142,6 +172,14 @@ function AdminContent() {
             .then(() => toast.success("Perfil removido."))
             .catch(() => toast.error("Não foi possível remover o perfil."));
         }}
+      />
+
+      <PasswordConfirmModal
+        key={passwordPrompt?.profile.id ?? "password-prompt"}
+        profile={passwordPrompt?.profile ?? null}
+        title={passwordPrompt?.action === "delete" ? "Remover perfil" : "Editar perfil"}
+        onConfirm={handlePasswordConfirmed}
+        onClose={() => setPasswordPrompt(null)}
       />
     </main>
   );

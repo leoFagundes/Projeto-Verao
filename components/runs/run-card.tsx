@@ -10,11 +10,13 @@ export function RunCard({
   index,
   onEdit,
   onDelete,
+  onShare,
 }: {
   run: Run;
   index: number;
   onEdit: () => void;
   onDelete: () => void;
+  onShare: () => void;
 }) {
   const typeMeta = RUN_TYPES.find((option) => option.key === run.type) ?? RUN_TYPES[0];
 
@@ -27,10 +29,10 @@ export function RunCard({
     >
       <div className="flex items-center gap-3">
         <div
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-lg text-slate-950"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-slate-950"
           style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
         >
-          {typeMeta.icon}
+          <typeMeta.icon className="h-5 w-5" />
         </div>
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -53,6 +55,9 @@ export function RunCard({
         <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-slate-300">
           {formatDate(run.date)}
         </span>
+        <button type="button" onClick={onShare} className="text-sm font-medium text-[var(--accent)] hover:underline">
+          Compartilhar
+        </button>
         <button type="button" onClick={onEdit} className="text-sm text-slate-300 hover:text-white">
           Editar
         </button>

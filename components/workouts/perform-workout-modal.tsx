@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock, Info } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Clock, Info, Link2, Play, RotateCcw, Trophy, X } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +21,8 @@ import { useMeasurements } from "@/lib/hooks/use-measurements";
 import { useProfiles } from "@/lib/hooks/use-profiles";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
-import { detectNewRecords, lastDurationForExercise, lastWeightForExercise } from "@/lib/stats";
+import { playSound } from "@/lib/sound";
+import { detectNewRecords, lastDurationForExercise, lastRepsForExercise, lastWeightForExercise } from "@/lib/stats";
 import { cn, formatClock, formatDateInput, parseDateInput } from "@/lib/utils";
 import type { SessionExerciseLog, SetLog, WorkoutSession } from "@/types/session";
 import type { Workout } from "@/types/workout";
@@ -45,8 +46,11 @@ function buildInitialLogs(workout: Workout, sessions: WorkoutSession[]): Session
     // Same convention as weight: prefill with the last time actually held, or
     // fall back to the plan's target — editable either way before marking done.
     const durationSeconds = exercise.measureType === "time" ? lastDuration ?? exercise.durationSeconds ?? 0 : null;
+    // Same idea again for reps — remember what was actually typed last time
+    // instead of always resetting to the plan's static target.
+    const reps = lastRepsForExercise(sessions, exercise.exerciseId) ?? exercise.reps;
     const sets: SetLog[] = Array.from({ length: Math.max(exercise.sets, 1) }, () => ({
-      reps: exercise.reps,
+      reps,
       weight,
       durationSeconds,
       done: false,
@@ -106,8 +110,9 @@ export function PerformWorkoutModal({
   const [expandedId, setExpandedId] = useState<string | null>(visibleExercises(workout)[0]?.id ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [timerEnabled, setTimerEnabled] = useState(true);
-  const [resting, setResting] = useState<{ key: number; seconds: number } | null>(null);
+  const [resting, setResting] = useState<{ key: number; seconds: number; resetToken: number } | null>(null);
   const restKeyRef = useRef(0);
+  const restResetTokenRef = useRef(0);
   const [viewingImagesFor, setViewingImagesFor] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState<Achievement[]>([]);
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
@@ -194,6 +199,9 @@ export function PerformWorkoutModal({
   }
 
   function updateSet(exerciseId: string, setIndex: number, patch: Partial<SetLog>) {
+    const before = exerciseLogs.find((log) => log.id === exerciseId);
+    const wasComplete = before ? isComplete(before) : false;
+
     const next = exerciseLogs.map((log) =>
       log.id === exerciseId
         ? { ...log, sets: log.sets.map((set, index) => (index === setIndex ? { ...set, ...patch } : set)) }
@@ -204,7 +212,9 @@ export function PerformWorkoutModal({
     const source = workout.exercises.find((exercise) => exercise.id === exerciseId);
     const updated = next.find((log) => log.id === exerciseId);
 
-    if (updated && isComplete(updated)) {
+    // Only auto-advance/collapse on the transition into "complete" — editing
+    // weight/reps on an already-complete exercise shouldn't re-trigger this.
+    if (updated && !wasComplete && isComplete(updated)) {
       if (source?.linkedToNext) {
         // Part of a superset — jump straight to the next exercise in the circuit.
         const currentIndex = next.findIndex((log) => log.id === exerciseId);
@@ -218,8 +228,15 @@ export function PerformWorkoutModal({
     if (patch.done === true && timerEnabled && !source?.linkedToNext) {
       const restSeconds = source?.restSeconds;
       if (restSeconds) {
-        restKeyRef.current += 1;
-        setResting({ key: restKeyRef.current, seconds: restSeconds });
+        restResetTokenRef.current += 1;
+        setResting((current) => {
+          // If a rest is already counting down, just restart it in place
+          // instead of swapping the key — swapping remounts the timer and
+          // replays its exit/enter animation on every consecutive "OK".
+          if (current) return { ...current, seconds: restSeconds, resetToken: restResetTokenRef.current };
+          restKeyRef.current += 1;
+          return { key: restKeyRef.current, seconds: restSeconds, resetToken: restResetTokenRef.current };
+        });
       }
     }
   }
@@ -257,6 +274,15 @@ export function PerformWorkoutModal({
 
   function updateExerciseNote(exerciseId: string, notes: string) {
     setExerciseLogs((current) => current.map((log) => (log.id === exerciseId ? { ...log, notes } : log)));
+  }
+
+  function goToSummary() {
+    // Auto-fills the duration from real elapsed time so most people never
+    // have to type it in — still editable on the summary screen, and going
+    // back to exercises and hitting "Continuar" again just recalculates it.
+    const minutes = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 60000));
+    setDurationMin(minutes);
+    setStep("summary");
   }
 
   function toggleShareProfile(profileId: string) {
@@ -314,7 +340,10 @@ export function PerformWorkoutModal({
       toast.success("Treino registrado!");
       for (const record of records) {
         const value = record.weight != null ? `${record.weight}kg` : formatClock(record.seconds ?? 0);
-        toast.success(`🏆 Novo recorde: ${record.name} — ${value}!`, { duration: 5000 });
+        toast.success(`Novo recorde: ${record.name} — ${value}!`, {
+          duration: 5000,
+          icon: <Trophy className="h-4 w-4" />,
+        });
       }
 
       if (shareWithProfileIds.length > 0) {
@@ -343,8 +372,10 @@ export function PerformWorkoutModal({
       }
 
       if (newlyUnlocked.length > 0) {
+        // The achievement modal already plays this sound — avoid stacking it twice.
         setCelebrating(newlyUnlocked);
       } else {
+        playSound("/sounds/tada.mp3", 0.35);
         onClose();
       }
     } catch (error) {
@@ -381,9 +412,10 @@ export function PerformWorkoutModal({
             <button
               type="button"
               onClick={() => setConfirmReset(true)}
-              className="shrink-0 font-medium text-[var(--accent)] hover:underline"
+              className="inline-flex shrink-0 items-center gap-1 font-medium text-[var(--accent)] hover:underline"
             >
-              ↺ Reiniciar
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reiniciar
             </button>
           </div>
         ) : progressInProgress ? (
@@ -391,9 +423,10 @@ export function PerformWorkoutModal({
             <button
               type="button"
               onClick={() => setConfirmReset(true)}
-              className="text-xs font-medium text-slate-400 hover:text-white"
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-white"
             >
-              ↺ Reiniciar treino
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reiniciar treino
             </button>
           </div>
         ) : null}
@@ -433,6 +466,7 @@ export function PerformWorkoutModal({
             <RestTimer
               key={resting.key}
               seconds={resting.seconds}
+              resetToken={resting.resetToken}
               onComplete={() => setResting(null)}
               onSkip={() => setResting(null)}
             />
@@ -474,8 +508,9 @@ export function PerformWorkoutModal({
                 )}
               >
                 {connectedToPrev || connectedToNext ? (
-                  <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
-                    🔗 Superserie
+                  <p className="flex items-center gap-1 px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
+                    <Link2 className="h-3 w-3" />
+                    Superserie
                   </p>
                 ) : null}
                 <div className="flex w-full items-start gap-3 p-3">
@@ -503,11 +538,11 @@ export function PerformWorkoutModal({
                   >
                     <span
                       className={cn(
-                        "mt-0.5 shrink-0 text-xs text-slate-500 transition-transform",
+                        "mt-0.5 shrink-0 text-slate-500 transition-transform",
                         expanded ? "rotate-90" : "",
                       )}
                     >
-                      ▸
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="break-words text-sm font-medium text-white">{log.name}</p>
@@ -552,9 +587,10 @@ export function PerformWorkoutModal({
                           <button
                             type="button"
                             onClick={() => setViewingVideoUrl(source.videoUrl)}
-                            className="inline-block text-xs text-[var(--accent)] hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
                           >
-                            ▶ Ver vídeo de como fazer
+                            <Play className="h-3 w-3" />
+                            Ver vídeo de como fazer
                           </button>
                         ) : null}
 
@@ -635,22 +671,22 @@ export function PerformWorkoutModal({
                                       onClick={() => updateSet(log.id, index, { done: !set.done })}
                                       aria-pressed={set.done}
                                       aria-label={set.done ? "Marcar série como não concluída" : "Marcar série como concluída"}
-                                      className="grid h-7 w-7 place-items-center justify-self-center rounded-full border-2 text-sm font-bold transition"
+                                      className="grid h-7 w-7 place-items-center justify-self-center rounded-full border-2 transition"
                                       style={
                                         set.done
                                           ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
                                           : { borderColor: "var(--border-strong)", color: "transparent" }
                                       }
                                     >
-                                      ✓
+                                      <Check className="h-3.5 w-3.5" />
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => removeSet(log.id, index)}
-                                      className="justify-self-center text-sm text-slate-500 hover:text-red-300"
+                                      className="justify-self-center text-slate-500 hover:text-red-300"
                                       aria-label="Remover série"
                                     >
-                                      ✕
+                                      <X className="h-4 w-4" />
                                     </button>
                                   </div>
                                 ))}
@@ -671,9 +707,10 @@ export function PerformWorkoutModal({
                             <button
                               type="button"
                               onClick={() => completeAllSets(log.id)}
-                              className="text-xs font-medium text-slate-400 hover:text-white"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-white"
                             >
-                              ✓ Concluir tudo
+                              <Check className="h-3.5 w-3.5" />
+                              Concluir tudo
                             </button>
                           ) : null}
                         </div>
@@ -694,7 +731,7 @@ export function PerformWorkoutModal({
           })}
         </div>
 
-              <Button type="button" className="w-full" onClick={() => setStep("summary")}>
+              <Button type="button" className="w-full" onClick={goToSummary}>
                 Continuar
               </Button>
             </motion.div>
@@ -710,9 +747,10 @@ export function PerformWorkoutModal({
               <button
                 type="button"
                 onClick={() => setStep("exercises")}
-                className="text-sm font-medium text-slate-300 hover:text-white"
+                className="inline-flex items-center gap-1 text-sm font-medium text-slate-300 hover:text-white"
               >
-                ← Voltar aos exercícios
+                <ArrowLeft className="h-4 w-4" />
+                Voltar aos exercícios
               </button>
 
               <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-center">
@@ -760,14 +798,14 @@ export function PerformWorkoutModal({
                           onClick={() => toggleShareProfile(profile.id)}
                           aria-pressed={selected}
                           className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                            "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition",
                             selected
                               ? "border-[var(--accent)] text-[var(--bg)]"
                               : "border-[var(--border)] text-slate-300 hover:border-[var(--accent)]",
                           )}
                           style={selected ? { background: "var(--accent)" } : undefined}
                         >
-                          {selected ? "✓ " : ""}
+                          {selected ? <Check className="h-3.5 w-3.5" /> : null}
                           {profile.name}
                         </button>
                       );

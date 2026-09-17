@@ -12,6 +12,7 @@ import { createRun, updateRun } from "@/lib/firebase/runs";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
+import { playSound } from "@/lib/sound";
 import { cn, formatDateInput, formatPace, parseDateInput } from "@/lib/utils";
 import { RUN_TYPES, type Run, type RunType } from "@/types/run";
 
@@ -92,8 +93,10 @@ export function RunFormModal({
         setNote("");
 
         if (newlyUnlocked.length > 0) {
+          // The achievement modal already plays this sound — avoid stacking it twice.
           setCelebrating(newlyUnlocked);
         } else {
+          playSound("/sounds/tada.mp3", 0.35);
           onClose();
         }
       }
@@ -127,7 +130,7 @@ export function RunFormModal({
                 )}
                 style={type === option.key ? { background: "var(--accent-soft)" } : undefined}
               >
-                <span className="block text-base">{option.icon}</span>
+                <option.icon className="mx-auto mb-1 h-4 w-4" />
                 {option.label}
               </button>
             ))}

@@ -1,6 +1,9 @@
+import { Zap } from "lucide-react";
+import { FaRunning } from "react-icons/fa";
+
 export const RUN_TYPES = [
-  { key: "normal", label: "Corrida normal", icon: "🏃" },
-  { key: "tiro", label: "Tiro", icon: "⚡" },
+  { key: "normal", label: "Corrida normal", icon: FaRunning },
+  { key: "tiro", label: "Tiro", icon: Zap },
 ] as const;
 
 export type RunType = (typeof RUN_TYPES)[number]["key"];

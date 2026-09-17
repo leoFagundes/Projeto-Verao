@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -98,14 +99,14 @@ export function LinkEditChoiceModal({
               className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-left"
             >
               <span
-                className="grid h-4 w-4 shrink-0 place-items-center rounded border-2 text-[10px] font-bold"
+                className="grid h-4 w-4 shrink-0 place-items-center rounded border-2"
                 style={
                   checked
                     ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
                     : { borderColor: "var(--border-strong)", color: "transparent" }
                 }
               >
-                ✓
+                <Check className="h-3 w-3" />
               </span>
               <span className="text-xs text-slate-200">{PERSONAL_FIELD_LABELS[field]}</span>
             </button>

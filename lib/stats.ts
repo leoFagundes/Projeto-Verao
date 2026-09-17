@@ -158,6 +158,27 @@ export function lastDurationForExercise(sessions: WorkoutSession[], exerciseId: 
   return progression.length > 0 ? progression[progression.length - 1].seconds : null;
 }
 
+/** Reps of the last completed set for an exercise log, or null if none logged. */
+function lastSetReps(exercise: WorkoutSession["exercises"][number]) {
+  const doneSets = exercise.sets.filter((set) => set.done && set.reps.trim() !== "");
+  if (doneSets.length === 0) return null;
+  return doneSets[doneSets.length - 1].reps;
+}
+
+/** Most recent logged reps for an exercise, used to prefill a new session —
+ * same idea as weight/duration: remembers what was actually typed last time
+ * instead of always resetting to the workout plan's static target. */
+export function lastRepsForExercise(sessions: WorkoutSession[], exerciseId: string) {
+  const sorted = [...sessions].sort((a, b) => b.date - a.date);
+  for (const session of sorted) {
+    const log = session.exercises.find((exercise) => exercise.exerciseId === exerciseId);
+    if (!log) continue;
+    const reps = lastSetReps(log);
+    if (reps != null) return reps;
+  }
+  return null;
+}
+
 /** Longest duration ever logged for an exercise — the personal record. */
 export function bestDurationForExercise(sessions: WorkoutSession[], exerciseId: string) {
   const progression = exerciseDurationProgression(sessions, exerciseId);

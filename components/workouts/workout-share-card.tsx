@@ -1,22 +1,8 @@
 import { Clock, Dumbbell, Repeat } from "lucide-react";
 
-import { Avatar } from "@/components/ui/avatar";
 import { formatClock, formatDateLong, formatDuration } from "@/lib/utils";
 import type { Profile } from "@/types/profile";
 import type { WorkoutSession } from "@/types/session";
-
-function totalVolume(session: WorkoutSession) {
-  return session.exercises.reduce((sum, log) => {
-    return (
-      sum +
-      log.sets.reduce((setSum, set) => {
-        if (!set.done || set.weight == null) return setSum;
-        const reps = parseInt(set.reps, 10);
-        return setSum + (Number.isFinite(reps) ? reps * set.weight : 0);
-      }, 0)
-    );
-  }, 0);
-}
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
@@ -30,41 +16,29 @@ function StatBlock({ label, value }: { label: string; value: string }) {
 export function WorkoutShareCard({ session, profile }: { session: WorkoutSession; profile?: Profile | null }) {
   const totalSets = session.exercises.reduce((sum, log) => sum + log.sets.length, 0);
   const doneSets = session.exercises.reduce((sum, log) => sum + log.sets.filter((s) => s.done).length, 0);
-  const volume = totalVolume(session);
 
   return (
     <div className="w-[min(380px,calc(100vw-5rem))] overflow-hidden rounded-[32px] border border-[var(--border)] bg-[var(--surface)]">
-      <div className="p-5 sm:p-6" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
-        <div className="flex items-center gap-3">
-          {profile ? (
-            <Avatar
-              name={profile.name}
-              photoUrl={profile.photoUrl}
-              className="h-11 w-11 shrink-0 rounded-2xl ring-2 ring-white/40"
-              textClassName="text-sm"
-            />
-          ) : (
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/20 text-slate-950">
-              <Dumbbell className="h-5 w-5" />
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-950/70">
-              Projeto Verão{profile ? ` · ${profile.name}` : ""}
-            </p>
-            <h2 className="mt-0.5 truncate text-xl font-bold text-slate-950">{session.workoutName}</h2>
-          </div>
-        </div>
-        <p className="mt-2.5 text-xs font-medium text-slate-950/70">
-          {formatDateLong(session.date)} · {formatDuration(session.durationMin)}
-        </p>
-      </div>
+      <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, var(--accent), var(--accent-2))" }} />
 
       <div className="p-5 sm:p-6">
+        <p
+          className="truncate text-[10px] font-semibold uppercase tracking-[0.24em]"
+          style={{ color: "var(--accent)" }}
+        >
+          Projeto Verão{profile ? ` · ${profile.name}` : ""}
+        </p>
+        <h2 className="mt-0.5 break-words text-lg font-bold leading-tight text-white sm:text-xl">
+          {session.workoutName}
+        </h2>
+        <p className="mt-2.5 text-xs font-medium text-slate-400">{formatDateLong(session.date)}</p>
+      </div>
+
+      <div className="border-t border-[var(--border)] p-5 sm:p-6">
       <div className="grid grid-cols-3 gap-2">
         <StatBlock label="Séries" value={`${doneSets}/${totalSets}`} />
         <StatBlock label="Exercícios" value={String(session.exercises.length)} />
-        <StatBlock label="Volume" value={volume > 0 ? `${Math.round(volume)}kg` : "—"} />
+        <StatBlock label="Tempo" value={formatDuration(session.durationMin)} />
       </div>
 
       <div className="mt-5 space-y-2.5">

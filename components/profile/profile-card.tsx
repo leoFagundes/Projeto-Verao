@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lock } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -43,10 +43,10 @@ export function ProfileCard({ profile, index }: { profile: Profile; index: numbe
         <div className="mt-4 flex items-center justify-between gap-3">
           <h3 className="min-w-0 truncate text-xl font-semibold text-white">{profile.name}</h3>
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm text-slate-950"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-slate-950"
             style={{ background: theme.gradient }}
           >
-            →
+            <ArrowRight className="h-4 w-4" />
           </div>
         </div>
       </Link>

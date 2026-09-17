@@ -1,6 +1,7 @@
 "use client";
 
 import { Reorder } from "framer-motion";
+import { Link2Off, Plus } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -131,11 +132,21 @@ export function WorkoutForm({
                         onClick={() => updateExercise(exercise.id, { linkedToNext: !exercise.linkedToNext })}
                         className={
                           exercise.linkedToNext
-                            ? "text-xs font-medium text-[var(--accent)] hover:underline"
-                            : "text-xs text-slate-500 hover:text-slate-300"
+                            ? "inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline"
+                            : "inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300"
                         }
                       >
-                        {exercise.linkedToNext ? "✕ Desfazer superserie" : "+ Unir com o próximo (superserie)"}
+                        {exercise.linkedToNext ? (
+                          <>
+                            <Link2Off className="h-3.5 w-3.5" />
+                            Desfazer superserie
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-3.5 w-3.5" />
+                            Unir com o próximo (superserie)
+                          </>
+                        )}
                       </button>
                     </div>
                   ) : null}

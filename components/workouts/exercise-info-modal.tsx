@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -51,7 +52,7 @@ export function ExerciseInfoModal({
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-slate-300 transition hover:border-[var(--accent)] hover:text-white"
                 aria-label="Fechar"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 

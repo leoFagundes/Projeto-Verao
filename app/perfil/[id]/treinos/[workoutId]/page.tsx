@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2 } from "lucide-react";
+import { Dumbbell, Link2, Play, Trophy } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -274,8 +274,8 @@ export default function WorkoutDetailPage() {
                       ) : null}
                     </button>
                   ) : (
-                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-xl">
-                      🏋️
+                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-slate-500">
+                      <Dumbbell className="h-6 w-6" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -305,17 +305,19 @@ export default function WorkoutDetailPage() {
                       {exercise.restSeconds ? ` · ${exercise.restSeconds}s descanso` : ""}
                     </p>
                     {exercise.linkedToNext ? (
-                      <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
-                        🔗 Superserie com o próximo
+                      <p className="mt-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--accent)]">
+                        <Link2 className="h-3 w-3" />
+                        Superserie com o próximo
                       </p>
                     ) : null}
                     {exercise.videoUrl ? (
                       <button
                         type="button"
                         onClick={() => setViewingVideoUrl(exercise.videoUrl)}
-                        className="text-xs text-[var(--accent)] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
                       >
-                        ▶ Ver vídeo de como fazer
+                        <Play className="h-3 w-3" />
+                        Ver vídeo de como fazer
                       </button>
                     ) : null}
                     {exercise.notes ? (
@@ -333,8 +335,9 @@ export default function WorkoutDetailPage() {
                           </span>
                         ) : null}
                         {best != null ? (
-                          <span className="ml-2 text-amber-400">
-                            🏆 {isTimeBased ? formatClock(best) : `${best}kg`}
+                          <span className="ml-2 inline-flex items-center gap-1 text-amber-400">
+                            <Trophy className="h-3.5 w-3.5" />
+                            {isTimeBased ? formatClock(best) : `${best}kg`}
                           </span>
                         ) : null}
                       </p>

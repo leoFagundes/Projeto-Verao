@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, X } from "lucide-react";
+import { Pencil, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,12 @@ export function WorkoutChangeNoteBanner({
           {formatDateLong(note.changedAt)}.
         </p>
         <div className="mt-4 space-y-3 text-sm">
-          {note.renamed ? <p className="text-slate-300">✏️ O nome do treino mudou.</p> : null}
+          {note.renamed ? (
+            <p className="flex items-center gap-1.5 text-slate-300">
+              <Pencil className="h-3.5 w-3.5" />
+              O nome do treino mudou.
+            </p>
+          ) : null}
           {note.addedNames.length > 0 ? (
             <div>
               <p className="text-xs uppercase tracking-[0.15em] text-emerald-400">Adicionados</p>

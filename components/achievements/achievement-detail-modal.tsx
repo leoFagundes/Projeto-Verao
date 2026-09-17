@@ -29,12 +29,16 @@ export function AchievementDetailModal({
     <Modal open={open} onClose={onClose} title={achievement.title}>
       <div className="flex flex-col items-center text-center">
         <div
-          className="grid h-16 w-16 place-items-center rounded-full text-3xl"
+          className="grid h-16 w-16 place-items-center rounded-full"
           style={
             isUnlocked ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" } : undefined
           }
         >
-          {isUnlocked ? achievement.icon : <Lock className="h-7 w-7 text-slate-600" />}
+          {isUnlocked ? (
+            <achievement.icon className="h-7 w-7" style={{ color: "var(--bg)" }} />
+          ) : (
+            <Lock className="h-7 w-7 text-slate-600" />
+          )}
         </div>
 
         <p className="mt-3 text-sm text-slate-400">{achievement.description}</p>

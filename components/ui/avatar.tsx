@@ -20,9 +20,16 @@ export function Avatar({
 }) {
   if (photoUrl) {
     return (
-      <div
-        className={cn("bg-cover bg-center", className)}
-        style={{ backgroundImage: `url(${photoUrl})` }}
+      // A real <img> (vs. a CSS background) loads/crops more reliably when
+      // this gets captured into an exported image (share cards): html-to-image
+      // clones <img> elements directly, but has known issues re-embedding
+      // background-image + background-size, which can drop or distort it.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={name}
+        crossOrigin="anonymous"
+        className={cn("object-cover", className)}
       />
     );
   }

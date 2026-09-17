@@ -1,6 +1,7 @@
 "use client";
 
 import { Reorder, useDragControls } from "framer-motion";
+import { Dumbbell, GripVertical, Link2, Play } from "lucide-react";
 import { useState } from "react";
 
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -68,8 +69,9 @@ export function ExerciseRow({
       )}
     >
       {connectedToPrev || connectedToNext ? (
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
-          🔗 Superserie
+        <p className="mb-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
+          <Link2 className="h-3 w-3" />
+          Superserie
         </p>
       ) : null}
       <div className="flex items-start gap-3">
@@ -79,7 +81,7 @@ export function ExerciseRow({
           className="mt-2 cursor-grab touch-none select-none text-slate-500 hover:text-slate-300 active:cursor-grabbing"
           aria-label="Reordenar"
         >
-          ⠿
+          <GripVertical className="h-4 w-4" />
         </button>
 
         <div className="min-w-0 flex-1 space-y-3">
@@ -95,8 +97,8 @@ export function ExerciseRow({
                   />
                 </button>
               ) : (
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-lg">
-                  🏋️
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-slate-500">
+                  <Dumbbell className="h-5 w-5" />
                 </div>
               )}
               <div className="min-w-0">
@@ -115,9 +117,10 @@ export function ExerciseRow({
                   <button
                     type="button"
                     onClick={() => setViewingVideo(true)}
-                    className="text-xs text-[var(--accent)] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
                   >
-                    ▶ Ver vídeo
+                    <Play className="h-3 w-3" />
+                    Ver vídeo
                   </button>
                 ) : null}
               </div>

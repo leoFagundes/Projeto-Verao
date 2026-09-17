@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeftRight, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -68,7 +69,7 @@ export function PhotoCompareSlider({
             className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur"
             aria-label="Fechar"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
 
           <motion.div
@@ -116,7 +117,7 @@ export function PhotoCompareSlider({
               className="absolute top-1/2 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-slate-900 shadow-lg"
               style={{ left: `${position}%` }}
             >
-              ↔
+              <ArrowLeftRight className="h-4 w-4" />
             </div>
           </motion.div>
         </motion.div>

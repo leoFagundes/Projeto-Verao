@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ExternalLink, X } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -51,7 +52,7 @@ export function VideoLightbox({
             className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur"
             aria-label="Fechar"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
 
           {videoId ? (
@@ -80,9 +81,10 @@ export function VideoLightbox({
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block text-[var(--accent)] hover:underline"
+                className="mt-3 inline-flex items-center gap-1 text-[var(--accent)] hover:underline"
               >
-                Abrir o link original ↗
+                Abrir o link original
+                <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
           )}

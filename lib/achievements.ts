@@ -1,3 +1,29 @@
+import {
+  Award,
+  BarChart3,
+  Compass,
+  Crown,
+  Dumbbell,
+  Flag,
+  Flame,
+  Gem,
+  Globe,
+  Medal,
+  Moon,
+  Ribbon,
+  Rocket,
+  Ruler,
+  Satellite,
+  Sparkles,
+  Sunrise,
+  Target,
+  Trophy,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+import { FaRunning } from "react-icons/fa";
+import type { IconType } from "react-icons";
+
 import type { WorkoutSession } from "@/types/session";
 import type { Run } from "@/types/run";
 import type { BodyMeasurement } from "@/types/measurement";
@@ -10,7 +36,7 @@ export type Achievement = {
   id: string;
   title: string;
   description: string;
-  icon: string;
+  icon: LucideIcon | IconType;
 };
 
 export type AchievementContext = {
@@ -80,21 +106,21 @@ type Def = Achievement & {
 };
 
 const WORKOUT_MILESTONES = [1, 10, 50, 100, 250, 500];
-const WORKOUT_ICONS = ["🏋️", "🥉", "🥈", "🥇", "🏵️", "💠"];
+const WORKOUT_ICONS = [Dumbbell, Medal, Award, Trophy, Ribbon, Gem];
 const DISTANCE_MILESTONES = [10, 50, 100, 250, 500];
-const DISTANCE_ICONS = ["📍", "🧭", "🌍", "🚀", "🛰️"];
+const DISTANCE_ICONS = [Target, Compass, Globe, Rocket, Satellite];
 const SINGLE_RUN_MILESTONES = [
-  { km: 2, title: "2km numa corrida", icon: "🔹" },
-  { km: 3, title: "3km numa corrida", icon: "🔹" },
-  { km: 4, title: "4km numa corrida", icon: "🔸" },
-  { km: 5, title: "5km numa corrida", icon: "🔸" },
-  { km: 10, title: "10km numa corrida", icon: "🥇" },
-  { km: 15, title: "15km numa corrida", icon: "🏅" },
-  { km: 21.1, title: "Meia maratona", icon: "🎖️" },
-  { km: 42.2, title: "Maratona", icon: "🏆" },
+  { km: 2, title: "2km numa corrida", icon: Target },
+  { km: 3, title: "3km numa corrida", icon: Target },
+  { km: 4, title: "4km numa corrida", icon: Flag },
+  { km: 5, title: "5km numa corrida", icon: Flag },
+  { km: 10, title: "10km numa corrida", icon: Medal },
+  { km: 15, title: "15km numa corrida", icon: Award },
+  { km: 21.1, title: "Meia maratona", icon: Ribbon },
+  { km: 42.2, title: "Maratona", icon: Trophy },
 ];
 const STREAK_MILESTONES = [7, 30, 60, 100];
-const STREAK_ICONS = ["🔥", "⚡", "💎", "👑"];
+const STREAK_ICONS = [Flame, Zap, Gem, Crown];
 const MEASUREMENT_MILESTONES = [1, 10, 25];
 const RECORD_MILESTONES = [1, 10, 25];
 
@@ -113,7 +139,7 @@ const DEFS: Def[] = [
     id: "first-run",
     title: "Primeira corrida",
     description: "Registre sua primeira corrida",
-    icon: "🏃",
+    icon: FaRunning,
     unlockedAt: (ctx) => nthDate(ctx.runs.map((r) => r.date), 1),
     progress: (ctx) => ({ current: ctx.runs.length, target: 1, unit: "corridas" }),
   },
@@ -152,7 +178,7 @@ const DEFS: Def[] = [
       id: `measurements-${n}`,
       title: n === 1 ? "Primeira medida" : `${n} registros de medida`,
       description: n === 1 ? "Registre sua primeira medição corporal" : `Registre suas medidas ${n} vezes`,
-      icon: n === 1 ? "📏" : "📊",
+      icon: n === 1 ? Ruler : BarChart3,
       unlockedAt: (ctx) => nthDate(ctx.measurements.map((m) => m.date), n),
       progress: (ctx) => ({ current: ctx.measurements.length, target: n, unit: "registros" }),
     }),
@@ -162,7 +188,7 @@ const DEFS: Def[] = [
       id: `records-${n}`,
       title: n === 1 ? "Primeiro recorde" : `${n} recordes pessoais`,
       description: n === 1 ? "Bata um recorde pessoal em algum exercício" : `Bata ${n} recordes pessoais ao longo do tempo`,
-      icon: n === 1 ? "🏆" : "👑",
+      icon: n === 1 ? Trophy : Crown,
       unlockedAt: (ctx) => nthDate(recordDates(ctx.sessions), n),
       progress: (ctx) => ({ current: recordDates(ctx.sessions).length, target: n, unit: "recordes" }),
     }),
@@ -171,7 +197,7 @@ const DEFS: Def[] = [
     id: "all-rounder",
     title: "Completo",
     description: "Registre um treino, uma corrida e uma medida",
-    icon: "🌟",
+    icon: Sparkles,
     unlockedAt: (ctx) => {
       const workout = nthDate(ctx.sessions.map((s) => s.date), 1);
       const run = nthDate(ctx.runs.map((r) => r.date), 1);
@@ -190,7 +216,7 @@ const DEFS: Def[] = [
     id: "early-bird",
     title: "Madrugador",
     description: "Registre um treino ou corrida antes das 7h",
-    icon: "🌅",
+    icon: Sunrise,
     unlockedAt: (ctx) =>
       nthDate(
         [...ctx.sessions.map((s) => s.createdAt), ...ctx.runs.map((r) => r.createdAt)].filter(
@@ -204,7 +230,7 @@ const DEFS: Def[] = [
     id: "night-owl",
     title: "Coruja",
     description: "Registre um treino ou corrida depois das 22h",
-    icon: "🌙",
+    icon: Moon,
     unlockedAt: (ctx) =>
       nthDate(
         [...ctx.sessions.map((s) => s.createdAt), ...ctx.runs.map((r) => r.createdAt)].filter(
@@ -218,7 +244,7 @@ const DEFS: Def[] = [
     id: "interval-master",
     title: "Mestre dos tiros",
     description: "Complete 10 corridas de tiro",
-    icon: "⚡",
+    icon: Zap,
     unlockedAt: (ctx) => nthDate(ctx.runs.filter((r) => r.type === "tiro").map((r) => r.date), 10),
     progress: (ctx) => ({ current: ctx.runs.filter((r) => r.type === "tiro").length, target: 10, unit: "tiros" }),
   },
@@ -226,7 +252,7 @@ const DEFS: Def[] = [
     id: "run-variety",
     title: "Corredor versátil",
     description: "Registre uma corrida normal e uma de tiro",
-    icon: "🎯",
+    icon: Target,
     unlockedAt: (ctx) => {
       const normal = nthDate(ctx.runs.filter((r) => r.type === "normal").map((r) => r.date), 1);
       const tiro = nthDate(ctx.runs.filter((r) => r.type === "tiro").map((r) => r.date), 1);

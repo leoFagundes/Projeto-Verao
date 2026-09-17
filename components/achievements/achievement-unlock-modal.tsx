@@ -70,10 +70,10 @@ export function AchievementUnlockModal({
                   className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-left"
                 >
                   <div
-                    className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-2xl"
+                    className="grid h-12 w-12 shrink-0 place-items-center rounded-full"
                     style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
                   >
-                    {achievement.icon}
+                    <achievement.icon className="h-6 w-6" style={{ color: "var(--bg)" }} />
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-white">{achievement.title}</p>

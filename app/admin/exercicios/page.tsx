@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Dumbbell, Play, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -194,8 +194,8 @@ function ExerciseLibraryContent() {
                       />
                     </button>
                   ) : (
-                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-xl">
-                      🏋️
+                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-slate-500">
+                      <Dumbbell className="h-6 w-6" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -207,9 +207,10 @@ function ExerciseLibraryContent() {
                       <button
                         type="button"
                         onClick={() => setViewingVideoUrl(exercise.videoUrl)}
-                        className="text-xs text-[var(--accent)] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
                       >
-                        ▶ Ver vídeo
+                        <Play className="h-3 w-3" />
+                        Ver vídeo
                       </button>
                     ) : null}
                     <div className="mt-1 flex gap-2">

@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayRemove,
   collection,
   deleteDoc,
   doc,
@@ -12,6 +13,7 @@ import {
 
 import type { BodyMeasurement } from "@/types/measurement";
 import type { Profile, ProfileInput } from "@/types/profile";
+import type { WorkoutLinkRef } from "@/types/workout";
 
 import { db } from "./client";
 import { deleteImageIfOwned, deleteImagesIfOwned } from "./storage";
@@ -82,17 +84,46 @@ export async function deleteProfile(profile: Profile) {
   const database = requireDb();
   const id = profile.id;
 
-  const measurementsSnapshot = await getDocs(collection(database, "profiles", id, "measurements"));
+  const [measurementsSnapshot, workoutsSnapshot] = await Promise.all([
+    getDocs(collection(database, "profiles", id, "measurements")),
+    getDocs(collection(database, "profiles", id, "workouts")),
+  ]);
   const measurementPhotos = measurementsSnapshot.docs.flatMap((docSnap) => {
     const data = docSnap.data() as Partial<BodyMeasurement> & { photoUrl?: string | null };
     return data.photos ?? (data.photoUrl ? [data.photoUrl] : []);
   });
 
-  const subcollections = ["workouts", "sessions", "runs", "measurements"];
+  // Every workout this profile owns is about to be deleted. Any that were
+  // linked to other profiles' workouts would otherwise leave those profiles
+  // pointing at a doc that no longer exists — clean up their side first,
+  // same as deleting a single linked workout already does.
   await Promise.all(
-    subcollections.map(async (name) => {
-      const snapshot = await getDocs(collection(database, "profiles", id, name));
-      await Promise.all(snapshot.docs.map((docSnap) => deleteDoc(docSnap.ref)));
+    workoutsSnapshot.docs.map(async (docSnap) => {
+      const linkedWorkouts = (docSnap.data().linkedWorkouts ?? []) as WorkoutLinkRef[];
+      if (linkedWorkouts.length === 0) return;
+      const myRef: WorkoutLinkRef = { profileId: id, workoutId: docSnap.id };
+      await Promise.all(
+        linkedWorkouts.map((ref) =>
+          updateDoc(doc(database, "profiles", ref.profileId, "workouts", ref.workoutId), {
+            linkedWorkouts: arrayRemove(myRef),
+          }).catch(() => {}),
+        ),
+      );
+    }),
+  );
+
+  const subcollections: Array<{ name: string; snapshot?: Awaited<ReturnType<typeof getDocs>> }> = [
+    { name: "workouts", snapshot: workoutsSnapshot },
+    { name: "sessions" },
+    { name: "runs" },
+    { name: "measurements", snapshot: measurementsSnapshot },
+    { name: "goals" },
+    { name: "activeSessions" },
+  ];
+  await Promise.all(
+    subcollections.map(async ({ name, snapshot }) => {
+      const docs = snapshot ?? (await getDocs(collection(database, "profiles", id, name)));
+      await Promise.all(docs.docs.map((docSnap) => deleteDoc(docSnap.ref)));
     }),
   );
 

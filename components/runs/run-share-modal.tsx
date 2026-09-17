@@ -8,17 +8,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import type { Profile } from "@/types/profile";
-import type { WorkoutSession } from "@/types/session";
+import type { Run } from "@/types/run";
 
-import { WorkoutShareCard } from "./workout-share-card";
+import { RunShareCard } from "./run-share-card";
 
-export function WorkoutShareModal({
-  session,
+export function RunShareModal({
+  run,
   profile,
   open,
   onClose,
 }: {
-  session: WorkoutSession | null;
+  run: Run | null;
   profile?: Profile | null;
   open: boolean;
   onClose: () => void;
@@ -27,12 +27,12 @@ export function WorkoutShareModal({
   const [generating, setGenerating] = useState(false);
 
   async function handleShare() {
-    if (!cardRef.current || !session) return;
+    if (!cardRef.current || !run) return;
 
     setGenerating(true);
     try {
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
-      const fileName = `treino-${session.workoutName.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const fileName = `corrida-${run.date}.png`;
 
       const canUseWebShare =
         typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator;
@@ -41,7 +41,7 @@ export function WorkoutShareModal({
         const blob = await (await fetch(dataUrl)).blob();
         const file = new File([blob], fileName, { type: "image/png" });
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: session.workoutName });
+          await navigator.share({ files: [file], title: "Corrida" });
           return;
         }
       }
@@ -60,13 +60,13 @@ export function WorkoutShareModal({
     }
   }
 
-  if (!session) return null;
+  if (!run) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title="Compartilhar treino">
+    <Modal open={open} onClose={onClose} title="Compartilhar corrida">
       <div className="flex justify-center overflow-x-auto rounded-2xl bg-[var(--field-bg)] p-3 sm:p-4">
         <div ref={cardRef}>
-          <WorkoutShareCard session={session} profile={profile} />
+          <RunShareCard run={run} profile={profile} />
         </div>
       </div>
 

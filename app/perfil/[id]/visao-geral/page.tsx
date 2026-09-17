@@ -1,8 +1,10 @@
 "use client";
 
+import { ArrowRight, Dumbbell, Flame, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { FaRunning } from "react-icons/fa";
 
 import { AchievementGrid } from "@/components/achievements/achievement-grid";
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
@@ -79,10 +81,30 @@ export default function ProfileOverviewPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Treinos" value={sessions.length} hint="Sessões concluídas" icon="🏋️" />
-        <StatTile label="Corridas" value={runs.length} hint="Registradas" icon="🏃" />
-        <StatTile label="Distância" value={`${km.toFixed(1)} km`} hint="Total acumulado" icon="📍" />
-        <StatTile label="Sequência" value={`${streak}d`} hint="Dias seguidos" icon="🔥" />
+        <StatTile
+          label="Treinos"
+          value={sessions.length}
+          hint="Sessões concluídas"
+          icon={<Dumbbell className="h-4 w-4" style={{ color: "var(--accent)" }} />}
+        />
+        <StatTile
+          label="Corridas"
+          value={runs.length}
+          hint="Registradas"
+          icon={<FaRunning className="h-4 w-4" style={{ color: "var(--accent)" }} />}
+        />
+        <StatTile
+          label="Distância"
+          value={`${km.toFixed(1)} km`}
+          hint="Total acumulado"
+          icon={<MapPin className="h-4 w-4" style={{ color: "var(--accent)" }} />}
+        />
+        <StatTile
+          label="Sequência"
+          value={`${streak}d`}
+          hint="Dias seguidos"
+          icon={<Flame className="h-4 w-4" style={{ color: "var(--accent)" }} />}
+        />
       </div>
 
       <Card className="p-5">
@@ -126,7 +148,8 @@ export default function ProfileOverviewPage() {
                       key={s.id}
                       className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-slate-200"
                     >
-                      🏋️ {s.workoutName}
+                      <Dumbbell className="h-4 w-4 shrink-0" style={{ color: "var(--accent)" }} />
+                      {s.workoutName}
                     </div>
                   ))}
                   {selectedDayRuns.map((r) => (
@@ -134,7 +157,8 @@ export default function ProfileOverviewPage() {
                       key={r.id}
                       className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-slate-200"
                     >
-                      🏃 {r.distanceKm.toFixed(1)} km · {formatPace(r.paceSecPerKm)}
+                      <FaRunning className="h-4 w-4 shrink-0" style={{ color: "var(--accent)" }} />
+                      {r.distanceKm.toFixed(1)} km · {formatPace(r.paceSecPerKm)}
                     </div>
                   ))}
                 </div>
@@ -200,7 +224,13 @@ export default function ProfileOverviewPage() {
                   className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="shrink-0 text-lg">{item.type === "treino" ? "🏋️" : "🏃"}</span>
+                    <span className="shrink-0" style={{ color: "var(--accent)" }}>
+                      {item.type === "treino" ? (
+                        <Dumbbell className="h-4 w-4" />
+                      ) : (
+                        <FaRunning className="h-4 w-4" />
+                      )}
+                    </span>
                     <span className="truncate text-sm font-medium text-white">{item.title}</span>
                   </div>
                   <span className="shrink-0 text-xs text-slate-400">{formatDate(item.date)}</span>
@@ -228,21 +258,24 @@ export default function ProfileOverviewPage() {
       <div className="flex flex-wrap gap-3">
         <Link
           href={`/perfil/${params.id}/treinos`}
-          className="text-sm font-medium text-[var(--accent)] hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:underline"
         >
-          Ver todos os treinos →
+          Ver todos os treinos
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
         <Link
           href={`/perfil/${params.id}/corridas`}
-          className="text-sm font-medium text-[var(--accent)] hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:underline"
         >
-          Ver todas as corridas →
+          Ver todas as corridas
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
         <Link
           href={`/perfil/${params.id}/medidas`}
-          className="text-sm font-medium text-[var(--accent)] hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] hover:underline"
         >
-          Ver medidas corporais →
+          Ver medidas corporais
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
     </div>

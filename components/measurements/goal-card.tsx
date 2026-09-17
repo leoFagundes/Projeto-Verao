@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 
 import { deleteGoal } from "@/lib/firebase/goals";
 import { goalProgress } from "@/lib/stats";
+import { cn } from "@/lib/utils";
 import { MEASUREMENT_FIELDS, type BodyMeasurement, type MeasurementGoal } from "@/types/measurement";
 
 export function GoalCard({
@@ -45,8 +47,22 @@ export function GoalCard({
           {goal.startValue}
           {fieldMeta?.unit}
         </span>
-        <span className={achieved ? "font-semibold text-[var(--accent)]" : "font-medium text-white"}>
-          {achieved ? "🎉 Meta atingida!" : current != null ? `${current}${fieldMeta?.unit}` : "—"}
+        <span
+          className={cn(
+            "inline-flex items-center gap-1",
+            achieved ? "font-semibold text-[var(--accent)]" : "font-medium text-white",
+          )}
+        >
+          {achieved ? (
+            <>
+              <PartyPopper className="h-3.5 w-3.5" />
+              Meta atingida!
+            </>
+          ) : current != null ? (
+            `${current}${fieldMeta?.unit}`
+          ) : (
+            "—"
+          )}
         </span>
         <span>
           {goal.targetValue}

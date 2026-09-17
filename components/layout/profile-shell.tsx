@@ -1,12 +1,12 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { THEME_META } from "@/lib/theme";
 import type { Profile } from "@/types/profile";
 
 import { BottomNav, TopTabs } from "./bottom-nav";
@@ -27,7 +27,6 @@ export function ProfileShell({
   profile: Profile;
   children: ReactNode;
 }) {
-  const theme = THEME_META[profile.theme];
   const pathname = usePathname();
   const backHref = backTarget(pathname, profile.id);
   const backLabel = backHref === "/" ? "Voltar para a home" : "Voltar";
@@ -53,10 +52,10 @@ export function ProfileShell({
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href={backHref}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-lg font-bold text-white transition hover:border-[var(--accent)]"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-white transition hover:border-[var(--accent)]"
                 aria-label={backLabel}
               >
-                ←
+                <ArrowLeft className="h-5 w-5" />
               </Link>
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -77,7 +78,7 @@ export function ImageLightbox({
             className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur"
             aria-label="Fechar"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
 
           {images.length > 1 ? (
@@ -108,7 +109,7 @@ export function ImageLightbox({
                 className="absolute left-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur disabled:opacity-30 sm:left-4"
                 aria-label="Imagem anterior"
               >
-                ‹
+                <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 type="button"
@@ -117,7 +118,7 @@ export function ImageLightbox({
                 className="absolute right-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur disabled:opacity-30 sm:right-4"
                 aria-label="Próxima imagem"
               >
-                ›
+                <ChevronRight className="h-5 w-5" />
               </button>
               <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
                 {images.map((_, i) => (

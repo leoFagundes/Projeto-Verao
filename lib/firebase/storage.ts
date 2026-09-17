@@ -19,19 +19,45 @@ export async function uploadImage(file: File, folder: string): Promise<string> {
 }
 
 /**
+ * Extracts our own Storage object path (e.g. "profiles/abc123.jpg") out of
+ * one of our own download URLs. Building a ref from this relative path
+ * instead of handing the SDK the full URL avoids a subtle failure mode:
+ * `ref(storage, url)` requires the URL's bucket host to string-match the
+ * currently configured bucket exactly, which silently throws (caught below
+ * and effectively ignored) if that ever drifts — e.g. the env var bucket
+ * name gets updated but older stored URLs still encode the previous one.
+ */
+function pathFromOwnedUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("firebasestorage")) return null;
+    const match = parsed.pathname.match(/\/o\/(.+)$/);
+    if (!match) return null;
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Deletes a file from our Storage bucket if `url` actually points there.
- * No-ops for pasted external links (not ours to delete) and for files that
- * are already gone — image cleanup is best-effort and must never block the
- * Firestore write it accompanies.
+ * No-ops for pasted external links (not ours to delete) — image cleanup is
+ * best-effort and must never block the Firestore write it accompanies, but
+ * a genuine failure (permissions, etc.) is logged instead of hidden, so it
+ * doesn't fail silently forever.
  */
 export async function deleteImageIfOwned(url: string | null | undefined) {
   if (!url || !storage) return;
 
+  const path = pathFromOwnedUrl(url);
+  if (!path) return;
+
   try {
-    await deleteObject(ref(storage, url));
-  } catch {
-    // Either an external URL that doesn't belong to this bucket, or the
-    // object was already removed — both are fine to ignore.
+    await deleteObject(ref(storage, path));
+  } catch (error) {
+    if ((error as { code?: string } | null)?.code !== "storage/object-not-found") {
+      console.error("Não foi possível apagar o arquivo do Storage:", path, error);
+    }
   }
 }
 

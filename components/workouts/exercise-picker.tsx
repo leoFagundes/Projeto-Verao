@@ -1,5 +1,6 @@
 "use client";
 
+import { Dumbbell } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -93,8 +94,8 @@ export function ExercisePicker({
                       className="h-11 w-11 shrink-0 rounded-xl object-cover"
                     />
                   ) : (
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-lg">
-                      🏋️
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--surface)] text-slate-500">
+                      <Dumbbell className="h-5 w-5" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">

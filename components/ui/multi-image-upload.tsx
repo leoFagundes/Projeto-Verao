@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -90,7 +91,7 @@ export function MultiImageUpload({
               className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xs text-slate-300 hover:text-white"
               aria-label="Remover imagem"
             >
-              ✕
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar, Ruler, Scale, TrendingDown } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -110,22 +111,45 @@ export default function MeasurementsPage() {
               label="Peso"
               value={weightTrend.latest ? `${weightTrend.latest.value} kg` : "—"}
               hint={weightTrend.delta != null ? `${weightTrend.delta > 0 ? "+" : ""}${weightTrend.delta}kg desde a última vez` : undefined}
-              icon="⚖️"
+              icon={<Scale className="h-4 w-4" style={{ color: "var(--accent)" }} />}
             />
             <StatTile
               label="IMC"
               value={bmi ?? "—"}
               hint={bmi != null ? "Peso e altura mais recentes" : "Registre peso e altura"}
-              icon="📐"
+              icon={<Ruler className="h-4 w-4" style={{ color: "var(--accent)" }} />}
             />
             <StatTile
               label="Gordura corporal"
               value={fatTrend.latest ? `${fatTrend.latest.value}%` : "—"}
               hint={fatTrend.delta != null ? `${fatTrend.delta > 0 ? "+" : ""}${fatTrend.delta}% desde a última vez` : undefined}
-              icon="📉"
+              icon={<TrendingDown className="h-4 w-4" style={{ color: "var(--accent)" }} />}
             />
-            <StatTile label="Registros" value={measurements.length} icon="📅" />
+            <StatTile
+              label="Registros"
+              value={measurements.length}
+              icon={<Calendar className="h-4 w-4" style={{ color: "var(--accent)" }} />}
+            />
           </div>
+
+          <Card className="p-5">
+            <SectionLabel>Registros</SectionLabel>
+            <h3 className="mt-1 text-lg font-semibold text-white">Histórico de medidas</h3>
+            <div className="mt-4 space-y-3">
+              {measurements.map((measurement, index) => (
+                <MeasurementCard
+                  key={measurement.id}
+                  measurement={measurement}
+                  index={index}
+                  onEdit={() => setEditing(measurement)}
+                  onDelete={() => setPendingDelete(measurement)}
+                  selectable={compareMode}
+                  selected={selectedIds.includes(measurement.id)}
+                  onToggleSelect={() => toggleSelected(measurement.id)}
+                />
+              ))}
+            </div>
+          </Card>
 
           <Card className="p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -230,45 +254,28 @@ export default function MeasurementsPage() {
         </>
       ) : null}
 
-      <div>
-        {loading ? (
-          <div className="space-y-3">
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
-              >
-                <div className="h-12 w-12 shrink-0 animate-pulse rounded-2xl bg-white/5" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="h-4 w-1/4 animate-pulse rounded bg-white/5" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-white/5" />
-                </div>
+      {loading ? (
+        <div className="space-y-3">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4"
+            >
+              <div className="h-12 w-12 shrink-0 animate-pulse rounded-2xl bg-white/5" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-1/4 animate-pulse rounded bg-white/5" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-white/5" />
               </div>
-            ))}
-          </div>
-        ) : measurements.length === 0 ? (
-          <EmptyState
-            title="Nenhuma medida registrada"
-            description="Registre peso, altura ou dados de bioimpedância — preencha só o que tiver, sem compromisso."
-            action={<Button onClick={() => setFormOpen(true)}>Registrar medidas</Button>}
-          />
-        ) : (
-          <div className="space-y-3">
-            {measurements.map((measurement, index) => (
-              <MeasurementCard
-                key={measurement.id}
-                measurement={measurement}
-                index={index}
-                onEdit={() => setEditing(measurement)}
-                onDelete={() => setPendingDelete(measurement)}
-                selectable={compareMode}
-                selected={selectedIds.includes(measurement.id)}
-                onToggleSelect={() => toggleSelected(measurement.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      ) : measurements.length === 0 ? (
+        <EmptyState
+          title="Nenhuma medida registrada"
+          description="Registre peso, altura ou dados de bioimpedância — preencha só o que tiver, sem compromisso."
+          action={<Button onClick={() => setFormOpen(true)}>Registrar medidas</Button>}
+        />
+      ) : null}
 
       <GoalFormModal
         open={goalFormOpen}

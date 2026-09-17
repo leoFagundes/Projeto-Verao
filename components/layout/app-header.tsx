@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -21,10 +22,10 @@ export function AppHeader({
           {backHref ? (
             <Link
               href={backHref}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-lg font-bold text-white transition hover:border-[var(--accent)]"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-white transition hover:border-[var(--accent)]"
               aria-label="Voltar"
             >
-              ←
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           ) : null}
           <Logo className="h-10 w-10 shrink-0" />
