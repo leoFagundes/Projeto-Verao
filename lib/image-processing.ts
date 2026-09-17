@@ -66,3 +66,38 @@ export async function getCroppedImageBlob(
     );
   });
 }
+
+/**
+ * Converts (if HEIC/HEIF) and re-encodes any photo as a JPEG, scaled down to
+ * fit within `maxDimension` on its longer side — no cropping, aspect ratio
+ * kept as-is. Used where the original framing matters (progress photos)
+ * and only reliability/size are the concern, not composition.
+ */
+export async function resizeImageToJpegBlob(file: File, maxDimension = 1600, quality = 0.85): Promise<Blob> {
+  const sourceBlob: Blob = isHeicFile(file) ? await convertHeicToJpegBlob(file) : file;
+  const objectUrl = URL.createObjectURL(sourceBlob);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas não suportado neste navegador.");
+    ctx.drawImage(image, 0, 0, width, height);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Falha ao processar a imagem."))),
+        "image/jpeg",
+        quality,
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}

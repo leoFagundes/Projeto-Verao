@@ -4,6 +4,7 @@ import { type FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { uploadImage } from "@/lib/firebase/storage";
+import { resizeImageToJpegBlob } from "@/lib/image-processing";
 
 export function MultiImageUpload({
   values,
@@ -17,20 +18,44 @@ export function MultiImageUpload({
   label?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [linkMode, setLinkMode] = useState(false);
   const [linkValue, setLinkValue] = useState("");
 
-  async function handleFile(file: File) {
-    setUploading(true);
-    try {
-      const url = await uploadImage(file, folder);
-      onChange([...values, url]);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao enviar imagem.");
-    } finally {
-      setUploading(false);
+  async function uploadOne(file: File) {
+    // Converts HEIC (iPhone default, unreadable in most browsers) and caps
+    // the size, without cropping — framing matters for progress photos.
+    const blob = await resizeImageToJpegBlob(file);
+    const resizedFile = new File([blob], "foto.jpg", { type: "image/jpeg" });
+    return uploadImage(resizedFile, folder);
+  }
+
+  async function handleFiles(files: FileList) {
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
+
+    setUploadProgress({ done: 0, total: fileList.length });
+    const urls: string[] = [];
+    let failures = 0;
+
+    for (const file of fileList) {
+      try {
+        urls.push(await uploadOne(file));
+      } catch {
+        failures += 1;
+      }
+      setUploadProgress((current) => (current ? { ...current, done: current.done + 1 } : current));
     }
+
+    if (urls.length > 0) onChange([...values, ...urls]);
+    if (failures > 0) {
+      toast.error(
+        failures === fileList.length
+          ? "Não foi possível enviar as imagens."
+          : `${failures} de ${fileList.length} imagens não puderam ser enviadas.`,
+      );
+    }
+    setUploadProgress(null);
   }
 
   function handleUseLink(event: FormEvent) {
@@ -75,8 +100,15 @@ export function MultiImageUpload({
           onClick={() => inputRef.current?.click()}
           className="relative grid h-20 w-20 shrink-0 place-items-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--field-bg)] text-slate-400 transition hover:border-[var(--accent)]"
         >
-          {uploading ? (
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          {uploadProgress ? (
+            <div className="flex flex-col items-center gap-1">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              {uploadProgress.total > 1 ? (
+                <span className="text-[10px] text-slate-400">
+                  {uploadProgress.done}/{uploadProgress.total}
+                </span>
+              ) : null}
+            </div>
           ) : (
             <span className="text-2xl">+</span>
           )}
@@ -127,11 +159,12 @@ export function MultiImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
+        multiple
         className="hidden"
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) handleFile(file);
+          const files = event.target.files;
+          if (files && files.length > 0) handleFiles(files);
           event.target.value = "";
         }}
       />
