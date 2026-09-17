@@ -61,6 +61,7 @@ export function ProfileForm({
           folder="profiles"
           label="Foto (opcional)"
           shape="circle"
+          previewName={name}
         />
         <Field label="Nome" className="flex-1">
           <Input

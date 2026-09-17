@@ -4,7 +4,11 @@ import { type FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { uploadImage } from "@/lib/firebase/storage";
+import { convertHeicToJpegBlob, isHeicFile } from "@/lib/image-processing";
 import { cn } from "@/lib/utils";
+
+import { ImageCropModal } from "./image-crop-modal";
+import { ImagePreviewModal } from "./image-preview-modal";
 
 export function ImageUpload({
   value,
@@ -12,25 +16,40 @@ export function ImageUpload({
   folder,
   label,
   shape = "square",
+  previewName,
 }: {
   value: string | null;
   onChange: (url: string | null) => void;
   folder: string;
   label?: string;
   shape?: "square" | "circle";
+  /** Used only to label the realistic card preview (e.g. the profile's name field). */
+  previewName?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(value);
   const [uploading, setUploading] = useState(false);
   const [linkMode, setLinkMode] = useState(false);
   const [linkValue, setLinkValue] = useState("");
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   async function handleFile(file: File) {
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
+    try {
+      const sourceBlob: Blob = isHeicFile(file) ? await convertHeicToJpegBlob(file) : file;
+      setCropSource(URL.createObjectURL(sourceBlob));
+    } catch {
+      toast.error("Não foi possível abrir essa imagem. Tente outro arquivo (JPEG/PNG).");
+    }
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setCropSource(null);
+    setPreview(URL.createObjectURL(blob));
     setUploading(true);
 
     try {
+      const file = new File([blob], "foto.jpg", { type: "image/jpeg" });
       const url = await uploadImage(file, folder);
       onChange(url);
     } catch (error) {
@@ -57,7 +76,7 @@ export function ImageUpload({
       <div className="flex items-center gap-4">
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => (preview ? setPreviewOpen(true) : inputRef.current?.click())}
           className={cn(
             "relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden border border-[var(--border)] bg-[var(--field-bg)] text-slate-400 transition hover:border-[var(--accent)]",
             shape === "circle" ? "rounded-full" : "rounded-2xl",
@@ -133,7 +152,7 @@ export function ImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -141,6 +160,23 @@ export function ImageUpload({
           event.target.value = "";
         }}
       />
+
+      <ImageCropModal
+        open={cropSource !== null}
+        imageSrc={cropSource}
+        shape={shape}
+        onCancel={() => setCropSource(null)}
+        onConfirm={handleCropConfirm}
+      />
+
+      {preview ? (
+        <ImagePreviewModal
+          open={previewOpen}
+          imageUrl={preview}
+          name={previewName ?? ""}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
