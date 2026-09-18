@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from "firebase/firestore";
 
 import type { SessionExerciseLog, SetLog, WorkoutSession, WorkoutSessionInput } from "@/types/session";
 
@@ -31,11 +31,12 @@ export function subscribeSessions(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<WorkoutSession, "id" | "exercises"> & {
+          const data = docSnap.data() as Omit<WorkoutSession, "id" | "exercises" | "sharedByName"> & {
             exercises: (Omit<SessionExerciseLog, "notes" | "sets"> & {
               notes?: string;
               sets: (Omit<SetLog, "durationSeconds"> & { durationSeconds?: number | null })[];
             })[];
+            sharedByName?: string | null;
           };
           return {
             id: docSnap.id,
@@ -45,6 +46,7 @@ export function subscribeSessions(
               notes: exercise.notes ?? "",
               sets: exercise.sets.map((set) => ({ ...set, durationSeconds: set.durationSeconds ?? null })),
             })),
+            sharedByName: data.sharedByName ?? null,
           };
         }),
       );
@@ -56,6 +58,7 @@ export function subscribeSessions(
 export async function createSession(profileId: string, input: WorkoutSessionInput) {
   const docRef = await addDoc(sessionsRef(profileId), {
     ...input,
+    sharedByName: input.sharedByName ?? null,
     createdAt: Date.now(),
   });
 
@@ -68,4 +71,11 @@ export async function createSession(profileId: string, input: WorkoutSessionInpu
 
 export async function deleteSession(profileId: string, sessionId: string) {
   await deleteDoc(doc(requireDb(), "profiles", profileId, "sessions", sessionId));
+}
+
+/** Clears the "someone shared this with you" notice once seen. */
+export async function dismissSessionShareNotice(profileId: string, sessionId: string) {
+  await updateDoc(doc(requireDb(), "profiles", profileId, "sessions", sessionId), {
+    sharedByName: null,
+  });
 }

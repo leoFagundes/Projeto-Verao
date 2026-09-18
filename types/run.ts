@@ -21,6 +21,10 @@ export type Run = {
   repDistanceM: number | null;
   note: string;
   createdAt: number;
+  /** Name of the profile that logged this FOR this one, via "share this
+   * run" at registration — null for a profile's own entries. Shown once as
+   * a notice, then cleared once dismissed. */
+  sharedByName: string | null;
 };
 
 export type RunInput = {
@@ -31,4 +35,5 @@ export type RunInput = {
   repCount: number | null;
   repDistanceM: number | null;
   note: string;
+  sharedByName?: string | null;
 };

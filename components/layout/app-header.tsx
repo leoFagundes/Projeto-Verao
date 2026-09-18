@@ -28,7 +28,7 @@ export function AppHeader({
               <ArrowLeft className="h-5 w-5" />
             </Link>
           ) : null}
-          <Logo className="h-10 w-10 shrink-0" />
+          <Logo className="h-14 w-14 shrink-0" />
           <div className="min-w-0">
             <p className="truncate text-xs uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
             <h1 className="truncate text-lg font-semibold text-white">{title}</h1>

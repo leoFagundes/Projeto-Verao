@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import type { Profile } from "@/types/profile";
 
 import { BottomNav, TopTabs } from "./bottom-nav";
+import { SharedActivityBanner } from "./shared-activity-banner";
 
 /** Top-level tab roots — landing on one of these directly means "back" should
  * leave the profile entirely; landing deeper (a workout detail, "novo", etc.)
@@ -79,7 +80,10 @@ export function ProfileShell({
           </div>
         </header>
 
-        <main className="mt-6">{children}</main>
+        <main className="mt-6">
+          <SharedActivityBanner profileId={profile.id} />
+          {children}
+        </main>
       </div>
 
       <BottomNav profileId={profile.id} />

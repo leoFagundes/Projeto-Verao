@@ -322,6 +322,7 @@ export function PerformWorkoutModal({
         note: note.trim(),
         exercises: exerciseLogs,
         createdAt: Date.now(),
+        sharedByName: null,
       };
       const newlyUnlocked = detectNewlyUnlocked(
         { sessions, runs, measurements },
@@ -347,6 +348,7 @@ export function PerformWorkoutModal({
       }
 
       if (shareWithProfileIds.length > 0) {
+        const myName = profiles.find((profile) => profile.id === profileId)?.name ?? "Alguém";
         const sharedNames: string[] = [];
         for (const targetProfileId of shareWithProfileIds) {
           try {
@@ -360,6 +362,7 @@ export function PerformWorkoutModal({
               durationMin,
               note: note.trim(),
               exercises: exerciseLogs,
+              sharedByName: myName,
             });
             sharedNames.push(profiles.find((profile) => profile.id === targetProfileId)?.name ?? "outro perfil");
           } catch {

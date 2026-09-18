@@ -79,8 +79,8 @@ export function MeasurementCard({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-slate-300">
+      <div className="flex flex-wrap shrink-0 items-center gap-x-3 gap-y-1.5">
+        <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-slate-300">
           {formatDate(measurement.date)}
         </span>
         {!selectable ? (

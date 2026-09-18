@@ -26,6 +26,10 @@ export type WorkoutSession = {
   note: string;
   exercises: SessionExerciseLog[];
   createdAt: number;
+  /** Name of the profile that logged this FOR this one, via "share this
+   * workout" at completion — null for a profile's own entries. Shown once as
+   * a notice, then cleared the same way a linked-workout change note is. */
+  sharedByName: string | null;
 };
 
 export type WorkoutSessionInput = {
@@ -35,6 +39,7 @@ export type WorkoutSessionInput = {
   durationMin: number;
   note: string;
   exercises: SessionExerciseLog[];
+  sharedByName?: string | null;
 };
 
 /** A workout in progress — saved as you go so closing the modal never loses it. */

@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { type Achievement, detectNewlyUnlocked } from "@/lib/achievements";
 import { createRun, updateRun } from "@/lib/firebase/runs";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
+import { useProfiles } from "@/lib/hooks/use-profiles";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { playSound } from "@/lib/sound";
@@ -31,7 +32,20 @@ export function RunFormModal({
   const { sessions } = useSessions(profileId);
   const { runs } = useRuns(profileId);
   const { measurements } = useMeasurements(profileId);
+  const { profiles } = useProfiles();
+  const shareableProfiles = profiles.filter(
+    (profile) => profile.id !== profileId && profile.allowSharedWorkouts,
+  );
   const [celebrating, setCelebrating] = useState<Achievement[]>([]);
+  const [shareWithProfileIds, setShareWithProfileIds] = useState<string[]>([]);
+
+  function toggleShareProfile(targetProfileId: string) {
+    setShareWithProfileIds((current) =>
+      current.includes(targetProfileId)
+        ? current.filter((id) => id !== targetProfileId)
+        : [...current, targetProfileId],
+    );
+  }
 
   const [date, setDate] = useState(() => formatDateInput(run?.date ?? Date.now()));
   const [type, setType] = useState<RunType>(run?.type ?? "normal");
@@ -76,7 +90,13 @@ export function RunFormModal({
         toast.success("Corrida atualizada!");
         onClose();
       } else {
-        const runInput: Run = { id: "pending", ...input, paceSecPerKm: 0, createdAt: Date.now() };
+        const runInput: Run = {
+          id: "pending",
+          ...input,
+          sharedByName: null,
+          paceSecPerKm: 0,
+          createdAt: Date.now(),
+        };
         const newlyUnlocked = detectNewlyUnlocked(
           { sessions, runs, measurements },
           { sessions, runs: [...runs, runInput], measurements },
@@ -84,6 +104,23 @@ export function RunFormModal({
 
         await createRun(profileId, input);
         toast.success("Corrida registrada!");
+
+        if (shareWithProfileIds.length > 0) {
+          const myName = profiles.find((profile) => profile.id === profileId)?.name ?? "Alguém";
+          const sharedNames: string[] = [];
+          for (const targetProfileId of shareWithProfileIds) {
+            try {
+              await createRun(targetProfileId, { ...input, sharedByName: myName });
+              sharedNames.push(profiles.find((profile) => profile.id === targetProfileId)?.name ?? "outro perfil");
+            } catch {
+              // Best-effort — one failed share shouldn't block the others or the main save.
+            }
+          }
+          if (sharedNames.length > 0) {
+            toast.success(`Corrida também registrada para ${sharedNames.join(", ")}.`);
+          }
+        }
+
         setType("normal");
         setDistanceKm("");
         setRepCount("");
@@ -91,6 +128,7 @@ export function RunFormModal({
         setMinutes("");
         setSeconds("");
         setNote("");
+        setShareWithProfileIds([]);
 
         if (newlyUnlocked.length > 0) {
           // The achievement modal already plays this sound — avoid stacking it twice.
@@ -217,6 +255,37 @@ export function RunFormModal({
             placeholder="Percurso, sensação, clima..."
           />
         </Field>
+
+        {!isEdit && shareableProfiles.length > 0 ? (
+          <div>
+            <span className="mb-2 block text-sm text-slate-300">Compartilhar esta corrida com (opcional)</span>
+            <div className="flex flex-wrap gap-2">
+              {shareableProfiles.map((profile) => {
+                const selected = shareWithProfileIds.includes(profile.id);
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => toggleShareProfile(profile.id)}
+                    aria-pressed={selected}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                      selected
+                        ? "border-[var(--accent)] text-[var(--bg)]"
+                        : "border-[var(--border)] text-slate-300 hover:border-[var(--accent)]",
+                    )}
+                    style={selected ? { background: "var(--accent)" } : undefined}
+                  >
+                    {profile.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              Ao registrar, essa corrida também entra no histórico e nas estatísticas dos perfis marcados.
+            </p>
+          </div>
+        ) : null}
 
         <Button type="submit" className="w-full" disabled={submitting || distance <= 0 || durationMin <= 0}>
           {submitting ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar corrida"}

@@ -8,31 +8,28 @@ export const contentType = "image/png";
 const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
   <rect width="40" height="40" fill="#101019" />
   <defs>
-    <linearGradient id="g" x1="6.5" y1="6.5" x2="33.5" y2="33.5" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="8" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
       <stop stop-color="#818cf8" />
       <stop offset="1" stop-color="#38bdf8" />
     </linearGradient>
   </defs>
-  <g stroke="url(#g)" stroke-width="2" stroke-linecap="round">
-    <line x1="20" y1="10" x2="20" y2="6.5" />
-    <line x1="27.1" y1="12.9" x2="29.6" y2="10.5" />
-    <line x1="30" y1="20" x2="33.5" y2="20" />
-    <line x1="27.1" y1="27.1" x2="29.6" y2="29.6" />
-    <line x1="20" y1="30" x2="20" y2="33.5" />
-    <line x1="12.9" y1="27.1" x2="10.4" y2="29.6" />
-    <line x1="10" y1="20" x2="6.5" y2="20" />
-    <line x1="12.9" y1="12.9" x2="10.4" y2="10.4" />
+  <g fill="url(#g)">
+    <polygon points="18.3,11.7 20,6 21.7,11.7" />
+    <polygon points="24.95,13.21 28.49,11.52 26.79,15.05" />
+    <polygon points="28.3,18.3 34,20 28.3,21.7" />
+    <polygon points="26.79,24.95 28.49,28.49 24.95,26.79" />
+    <polygon points="21.7,28.3 20,34 18.3,28.3" />
+    <polygon points="15.05,26.79 11.52,28.49 13.21,24.95" />
+    <polygon points="11.7,21.7 6,20 11.7,18.3" />
+    <polygon points="13.21,15.05 11.52,11.52 15.05,13.21" />
   </g>
   <circle cx="20" cy="20" r="8" fill="url(#g)" />
-  <g fill="#101019">
-    <rect x="12.8" y="17.1" width="5.5" height="4.4" rx="1.7" />
-    <rect x="21.7" y="17.1" width="5.5" height="4.4" rx="1.7" />
-  </g>
-  <g stroke="#101019" stroke-width="1.9" stroke-linecap="round">
-    <line x1="18.3" y1="19.3" x2="21.7" y2="19.3" />
-    <line x1="12.8" y1="18.2" x2="10.2" y2="17" />
-    <line x1="27.2" y1="18.2" x2="29.8" y2="17" />
-  </g>
+  <circle cx="20" cy="20" r="7.7" fill="none" stroke="#5b63c4" stroke-width="0.6" opacity="0.3" />
+  <rect x="18.6" y="18.9" width="2.8" height="1.4" rx="0.7" fill="#101019" />
+  <circle cx="15.6" cy="19.6" r="3.3" fill="#101019" />
+  <circle cx="24.4" cy="19.6" r="3.3" fill="#101019" />
+  <circle cx="14.5" cy="18.3" r="0.6" fill="#ffffff" opacity="0.5" />
+  <circle cx="23.3" cy="18.3" r="0.6" fill="#ffffff" opacity="0.5" />
 </svg>`;
 
 const dataUri = `data:image/svg+xml;base64,${Buffer.from(markSvg).toString("base64")}`;
