@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -80,9 +81,19 @@ export function ProfileShell({
           </div>
         </header>
 
-        <main className="mt-6">
-          <SharedActivityBanner profileId={profile.id} />
-          {children}
+        <main className="relative mt-6">
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6, position: "absolute", top: 0, left: 0, right: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <SharedActivityBanner profileId={profile.id} />
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

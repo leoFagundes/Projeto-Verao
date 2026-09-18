@@ -60,3 +60,17 @@ export function ScaleIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function MealIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M7 3v6" />
+      <path d="M9 3v6" />
+      <path d="M11 3v6" />
+      <path d="M9 9v12" />
+      <path d="M16 3v7" />
+      <path d="M18 3l-2 7" />
+      <path d="M16.5 10v11" />
+    </svg>
+  );
+}

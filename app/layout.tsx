@@ -34,9 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-br"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full overflow-x-hidden antialiased`}
     >
-      <body className="min-h-full">
+      <body className="min-h-full overflow-x-hidden">
         <Providers>{children}</Providers>
       </body>
     </html>

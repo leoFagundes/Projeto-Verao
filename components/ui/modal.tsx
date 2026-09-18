@@ -50,7 +50,7 @@ export function Modal({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[28px] border border-[var(--border-strong)] bg-[var(--surface)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-[28px] sm:p-6"
+            className="relative max-h-[92dvh] w-full overflow-y-auto overflow-x-hidden rounded-t-[28px] border border-[var(--border-strong)] bg-[var(--surface)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-[28px] sm:p-6"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">{title}</h2>

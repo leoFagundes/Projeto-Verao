@@ -1,24 +1,29 @@
 "use client";
 
-import { Dumbbell, X } from "lucide-react";
+import { Dumbbell, Utensils, X } from "lucide-react";
 import { FaRunning } from "react-icons/fa";
 
+import { dismissDietShareNotice } from "@/lib/firebase/diets";
 import { dismissSessionShareNotice } from "@/lib/firebase/sessions";
 import { dismissRunShareNotice } from "@/lib/firebase/runs";
+import { useDiets } from "@/lib/hooks/use-diets";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
 
-/** Shown as soon as someone enters a profile that has treinos/corridas another
- * profile logged for it via "compartilhar" — a one-time heads-up, dismissed
- * per item, so a shared entry never just silently appears in the history. */
+/** Shown as soon as someone enters a profile that has treinos/corridas/dietas
+ * another profile logged or created for it via "compartilhar" — a one-time
+ * heads-up, dismissed per item, so a shared entry never just silently
+ * appears in the history. */
 export function SharedActivityBanner({ profileId }: { profileId: string }) {
   const { sessions } = useSessions(profileId);
   const { runs } = useRuns(profileId);
+  const { diets } = useDiets(profileId);
 
   const sharedSessions = sessions.filter((session) => session.sharedByName);
   const sharedRuns = runs.filter((run) => run.sharedByName);
+  const sharedDiets = diets.filter((diet) => diet.sharedByName);
 
-  if (sharedSessions.length === 0 && sharedRuns.length === 0) return null;
+  if (sharedSessions.length === 0 && sharedRuns.length === 0 && sharedDiets.length === 0) return null;
 
   return (
     <div className="mb-6 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] p-3">
@@ -61,6 +66,28 @@ export function SharedActivityBanner({ profileId }: { profileId: string }) {
             <button
               type="button"
               onClick={() => dismissRunShareNotice(profileId, run.id)}
+              className="shrink-0 text-slate-400 hover:text-white"
+              aria-label="Dispensar aviso"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        {sharedDiets.map((diet) => (
+          <div
+            key={diet.id}
+            className="flex items-center justify-between gap-2 rounded-xl bg-[var(--surface)] px-3 py-2 text-sm text-slate-200"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <Utensils className="h-4 w-4 shrink-0" style={{ color: "var(--accent)" }} />
+              <span className="min-w-0 truncate">
+                <span className="font-medium text-white">{diet.sharedByName}</span> criou a dieta &ldquo;{diet.name}
+                &rdquo; para você
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => dismissDietShareNotice(profileId, diet.id)}
               className="shrink-0 text-slate-400 hover:text-white"
               aria-label="Dispensar aviso"
             >

@@ -119,6 +119,8 @@ export async function deleteProfile(profile: Profile) {
     { name: "measurements", snapshot: measurementsSnapshot },
     { name: "goals" },
     { name: "activeSessions" },
+    { name: "diets" },
+    { name: "dietHistory" },
   ];
   await Promise.all(
     subcollections.map(async ({ name, snapshot }) => {
