@@ -20,6 +20,7 @@ import type {
   DietMealCheck,
   DietOffTrackNote,
   DietProgress,
+  WeekdayKey,
 } from "@/types/diet";
 
 import { db } from "./client";
@@ -189,6 +190,34 @@ export async function activateDiet(profileId: string, dietId: string, allDiets: 
 export async function setMealCheck(profileId: string, dietId: string, key: string, check: DietMealCheck) {
   await updateDoc(doc(requireDb(), "profiles", profileId, "diets", dietId), {
     [`progress.${key}`]: check,
+  });
+}
+
+/** Adds a new choice to one meal slot, on top of whatever was already
+ * planned for that day (e.g. planned "Shake ou ovo", but today it's
+ * something else entirely) — persisted onto the diet itself, so it's there
+ * as an option again next time this day comes around, not just for today. */
+export async function addMealOption(
+  profileId: string,
+  dietId: string,
+  days: DietDayPlan[],
+  day: WeekdayKey,
+  mealId: string,
+  option: string,
+) {
+  const nextDays = days.map((dayPlan) =>
+    dayPlan.day === day
+      ? {
+          ...dayPlan,
+          meals: dayPlan.meals.map((meal) =>
+            meal.id === mealId ? { ...meal, options: [...meal.options, option] } : meal,
+          ),
+        }
+      : dayPlan,
+  );
+  await updateDoc(doc(requireDb(), "profiles", profileId, "diets", dietId), {
+    days: nextDays,
+    updatedAt: Date.now(),
   });
 }
 

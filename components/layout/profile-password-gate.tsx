@@ -4,9 +4,12 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { isSessionUnlocked, markSessionUnlocked } from "@/lib/session-unlock";
 import type { Profile } from "@/types/profile";
 
-/** Soft PIN gate for a profile — same client-side model as AdminGate, not real auth. */
+/** Soft PIN gate for a profile — same client-side model as AdminGate, not
+ * real auth. Unlocking lasts 24h (stored in localStorage), not just the
+ * current tab, so it isn't asked again every time the app is reopened. */
 export function ProfilePasswordGate({ profile, children }: { profile: Profile; children: ReactNode }) {
   const hasPassword = Boolean(profile.password);
   const storageKey = `projeto-verao-profile-unlocked-${profile.id}`;
@@ -18,17 +21,17 @@ export function ProfilePasswordGate({ profile, children }: { profile: Profile; c
 
   useEffect(() => {
     if (!hasPassword) return;
-    // sessionStorage only exists client-side, so this can't be read during
+    // localStorage only exists client-side, so this can't be read during
     // render (would break SSR) — the effect is the correct place for it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUnlocked(sessionStorage.getItem(storageKey) === "true");
+    setUnlocked(isSessionUnlocked(storageKey));
     setChecked(true);
   }, [hasPassword, storageKey]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (input === profile.password) {
-      sessionStorage.setItem(storageKey, "true");
+      markSessionUnlocked(storageKey);
       setUnlocked(true);
       setError(false);
     } else {

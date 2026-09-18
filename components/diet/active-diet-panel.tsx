@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatTile } from "@/components/ui/stat-tile";
-import { endDietCycle, setMealCheck, setOffTrack } from "@/lib/firebase/diets";
+import { addMealOption, endDietCycle, setMealCheck, setOffTrack } from "@/lib/firebase/diets";
 import { dietSummary, dueMealsSoFar, progressKey } from "@/lib/diet-stats";
 import { cn, formatDateLong } from "@/lib/utils";
-import { WEEKDAYS, todayWeekdayKey, type Diet, type WeekdayKey } from "@/types/diet";
+import { WEEKDAYS, todayWeekdayKey, type Diet, type DietMeal, type WeekdayKey } from "@/types/diet";
 
 import { MealCheckRow } from "./meal-check-row";
 import { WeekOverview } from "./week-overview";
@@ -50,6 +50,19 @@ export function ActiveDietPanel({ profileId, diet }: { profileId: string; diet: 
       toast.success(keepActive ? "Semana reiniciada! O histórico da anterior foi salvo." : "Dieta encerrada. A semana foi salva no histórico.");
     } catch {
       toast.error("Não foi possível concluir a ação.");
+    }
+  }
+
+  async function handleAddOption(meal: DietMeal, option: string) {
+    try {
+      const newIndex = meal.options.length;
+      await addMealOption(profileId, diet.id, diet.days, selectedDay, meal.id, option);
+      const key = progressKey(selectedDay, meal.id);
+      const existing = diet.progress[key];
+      await setMealCheck(profileId, diet.id, key, { done: true, note: existing?.note ?? "", optionIndex: newIndex });
+      toast.success("Opção adicionada!");
+    } catch {
+      toast.error("Não foi possível adicionar a opção.");
     }
   }
 
@@ -104,7 +117,7 @@ export function ActiveDietPanel({ profileId, diet }: { profileId: string; diet: 
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
         <StatTile label="Refeições" value={`${summary.done}/${summary.total}`} />
         <StatTile
           label="Hoje"
@@ -189,6 +202,7 @@ export function ActiveDietPanel({ profileId, diet }: { profileId: string; diet: 
               meal={meal}
               check={diet.progress[progressKey(selectedDay, meal.id)]}
               onChange={(patch) => setMealCheck(profileId, diet.id, progressKey(selectedDay, meal.id), patch)}
+              onAddOption={(option) => handleAddOption(meal, option)}
             />
           ))
         )}

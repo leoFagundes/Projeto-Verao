@@ -49,10 +49,10 @@ type Tab = ReturnType<typeof tabsFor>[number];
 
 function SideTab({ tab, active }: { tab: Tab; active: boolean }) {
   return (
-    <Link href={tab.href} className="relative flex-1">
+    <Link href={tab.href} className="relative flex justify-center">
       <motion.div
         whileTap={{ scale: 0.93 }}
-        className="relative flex flex-col items-center gap-0.5 py-2"
+        className="relative flex flex-col items-center gap-0.5 px-2 py-2"
       >
         {active ? (
           <motion.span
@@ -74,7 +74,7 @@ function SideTab({ tab, active }: { tab: Tab; active: boolean }) {
         </span>
         <span
           className={cn(
-            "relative z-10 text-[10.5px] font-medium transition-colors",
+            "relative z-10 whitespace-nowrap text-[10px] font-medium transition-colors",
             active ? "" : "text-slate-500",
           )}
           style={active ? { color: "var(--accent)" } : undefined}

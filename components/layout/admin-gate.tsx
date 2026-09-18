@@ -4,9 +4,12 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { isSessionUnlocked, markSessionUnlocked } from "@/lib/session-unlock";
 
 const SESSION_KEY = "projeto-verao-admin-unlocked";
 
+/** Same soft-passcode gate as ProfilePasswordGate — unlocking lasts 24h
+ * (localStorage), not just the current tab. */
 export function AdminGate({ children }: { children: ReactNode }) {
   const passcode = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
   const [unlocked, setUnlocked] = useState(!passcode);
@@ -16,17 +19,17 @@ export function AdminGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!passcode) return;
-    // sessionStorage only exists client-side, so this can't be read during
+    // localStorage only exists client-side, so this can't be read during
     // render (would break SSR) — the effect is the correct place for it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUnlocked(sessionStorage.getItem(SESSION_KEY) === "true");
+    setUnlocked(isSessionUnlocked(SESSION_KEY));
     setChecked(true);
   }, [passcode]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (input === passcode) {
-      sessionStorage.setItem(SESSION_KEY, "true");
+      markSessionUnlocked(SESSION_KEY);
       setUnlocked(true);
       setError(false);
     } else {
