@@ -1,16 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Settings, Trophy } from "lucide-react";
+import { HelpCircle, Settings, Trophy } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
+import { HelpModal } from "@/components/layout/help-modal";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useProfiles } from "@/lib/hooks/use-profiles";
 
 export default function HomePage() {
   const { profiles, loading } = useProfiles();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   return (
     <main className="min-h-dvh bg-[var(--bg)] text-white">
@@ -34,6 +37,14 @@ export default function HomePage() {
               >
                 <Settings className="h-5 w-5" />
               </Link>
+              <button
+                type="button"
+                onClick={() => setHelpOpen(true)}
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
+                aria-label="Como o app funciona"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
             </div>
           }
         />
@@ -87,6 +98,8 @@ export default function HomePage() {
           )}
         </section>
       </div>
+
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </main>
   );
 }

@@ -69,6 +69,12 @@ export type Workout = {
   /** Other profiles' copies of this same workout — editing here can optionally propagate to all of them. */
   linkedWorkouts: WorkoutLinkRef[];
   pendingChangeNote: WorkoutChangeNote | null;
+  /** Profile that originally created this workout (traced through every copy,
+   * not just "whoever I copied from") — only this profile can push a synced
+   * edit to the rest of the link group. Anyone else editing a linked copy
+   * loses the link instead. Defaults to the profile's own id for a workout
+   * that was never linked to anyone. */
+  ownerProfileId: string;
 };
 
 export type WorkoutInput = {

@@ -3,13 +3,16 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { generateId } from "@/lib/utils";
@@ -67,10 +70,11 @@ export function subscribeWorkouts(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<Workout, "id" | "exercises" | "linkedWorkouts" | "pendingChangeNote"> & {
+          const data = docSnap.data() as Omit<Workout, "id" | "exercises" | "linkedWorkouts" | "pendingChangeNote" | "ownerProfileId"> & {
             exercises: Record<string, unknown>[];
             linkedWorkouts?: WorkoutLinkRef[];
             pendingChangeNote?: Workout["pendingChangeNote"];
+            ownerProfileId?: string;
           };
           return {
             id: docSnap.id,
@@ -79,6 +83,10 @@ export function subscribeWorkouts(
             exercises: data.exercises.map(normalizeStoredExercise),
             linkedWorkouts: data.linkedWorkouts ?? [],
             pendingChangeNote: data.pendingChangeNote ?? null,
+            // Falls back to "I own my own copy" for any workout the migration
+            // hasn't (yet) stamped with a real owner — fails toward the safer
+            // side, since it just means sync stays unavailable until then.
+            ownerProfileId: data.ownerProfileId ?? profileId,
           };
         }),
       );
@@ -101,7 +109,11 @@ function normalizeExercises(exercises: WorkoutInput["exercises"]) {
   }));
 }
 
-export async function createWorkout(profileId: string, input: WorkoutInput) {
+export async function createWorkout(
+  profileId: string,
+  input: WorkoutInput,
+  options?: { ownerProfileId?: string },
+) {
   const now = Date.now();
   const docRef = await addDoc(workoutsRef(profileId), {
     name: input.name,
@@ -112,6 +124,10 @@ export async function createWorkout(profileId: string, input: WorkoutInput) {
     lastPerformedAt: null,
     linkedWorkouts: [],
     pendingChangeNote: null,
+    // The creator owns it by default — copyWorkout overrides this to the
+    // original source's owner for a *linked* copy, since a copy isn't a new
+    // original.
+    ownerProfileId: options?.ownerProfileId ?? profileId,
   });
   return docRef.id;
 }
@@ -143,7 +159,16 @@ export async function propagateWorkoutEdit(
   linkedWorkouts: WorkoutLinkRef[],
   syncFields: Set<PersonalExerciseField>,
   changedBy: { profileId: string; name: string },
+  ownerProfileId: string,
 ) {
+  // Defense in depth to match the UI gate — this whole app trusts the
+  // client for its business rules already (no server), but the check still
+  // belongs here, not just in the page, so nothing can call this function
+  // and skip it by accident.
+  if (changedBy.profileId !== ownerProfileId) {
+    throw new Error("Só quem criou o treino pode sincronizar alterações com o grupo vinculado.");
+  }
+
   const sourceExercises = normalizeExercises(input.exercises) as Exercise[];
   await updateWorkout(profileId, workoutId, input);
 
@@ -188,7 +213,9 @@ export async function dismissWorkoutChangeNote(profileId: string, workoutId: str
 }
 
 /** Saves an edit only to this profile's copy and leaves the link group —
- * every other member keeps their link to each other, just not to this one. */
+ * every other member keeps their link to each other, just not to this one.
+ * This copy also becomes its own owner: once it's out of the group, there's
+ * no group left for the old owner to sync into it anyway. */
 export async function updateWorkoutAndUnlink(
   profileId: string,
   workoutId: string,
@@ -198,6 +225,7 @@ export async function updateWorkoutAndUnlink(
   await updateWorkout(profileId, workoutId, input);
   await updateDoc(doc(requireDb(), "profiles", profileId, "workouts", workoutId), {
     linkedWorkouts: [],
+    ownerProfileId: profileId,
   });
   const myRef: WorkoutLinkRef = { profileId, workoutId };
   await Promise.all(
@@ -240,11 +268,19 @@ export async function copyWorkout(
   const sameProfile = sourceProfileId === targetProfileId;
   const linked = Boolean(options?.linked) && !sameProfile;
 
-  const newWorkoutId = await createWorkout(targetProfileId, {
-    name: sameProfile ? `${workout.name} (cópia)` : workout.name,
-    category: workout.category,
-    exercises: workout.exercises,
-  });
+  const newWorkoutId = await createWorkout(
+    targetProfileId,
+    {
+      name: sameProfile ? `${workout.name} (cópia)` : workout.name,
+      category: workout.category,
+      exercises: workout.exercises,
+    },
+    // A linked copy traces ownership back to the original creator (not
+    // whoever it was copied from, and not the new profile) — that's who
+    // gets to push synced edits to the whole group. An unlinked copy is a
+    // clean break, so it owns itself like any other new workout.
+    { ownerProfileId: linked ? workout.ownerProfileId : targetProfileId },
+  );
 
   if (linked) {
     // The new copy joins the whole existing group (the source plus whoever it was already linked to).
@@ -268,6 +304,51 @@ export async function copyWorkout(
   }
 
   return newWorkoutId;
+}
+
+/** Legacy default owner for pre-existing linked workouts that predate
+ * `ownerProfileId` — there's no historical record of who created them
+ * first, so this is a one-time human call for the migration below. */
+const LEGACY_LINKED_WORKOUT_OWNER = "QTzJro6mu7aHOMfGmkI2";
+
+/**
+ * One-time migration: stamps `ownerProfileId` onto every workout that
+ * predates it. A workout that's part of a link group gets the legacy
+ * default owner above; a workout that was never linked owns itself (that
+ * doesn't change anything for it — ownership only matters within a group).
+ * Purely additive, only touches docs missing the field, safe to re-run.
+ */
+export async function migrateWorkoutOwnership() {
+  const database = requireDb();
+  const snapshot = await getDocs(collectionGroup(database, "workouts"));
+
+  let updated = 0;
+  let batch = writeBatch(database);
+  let batchCount = 0;
+
+  for (const workoutDoc of snapshot.docs) {
+    const data = workoutDoc.data() as { ownerProfileId?: string; linkedWorkouts?: WorkoutLinkRef[] };
+    if (data.ownerProfileId) continue;
+
+    const profileId = workoutDoc.ref.parent.parent?.id;
+    if (!profileId) continue;
+
+    const ownerProfileId =
+      (data.linkedWorkouts?.length ?? 0) > 0 ? LEGACY_LINKED_WORKOUT_OWNER : profileId;
+
+    batch.update(workoutDoc.ref, { ownerProfileId });
+    batchCount += 1;
+    updated += 1;
+
+    if (batchCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(database);
+      batchCount = 0;
+    }
+  }
+
+  if (batchCount > 0) await batch.commit();
+  return { updated, total: snapshot.size };
 }
 
 export async function deleteWorkout(profileId: string, workout: Workout) {

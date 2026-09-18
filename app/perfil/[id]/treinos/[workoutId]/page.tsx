@@ -53,6 +53,11 @@ export default function WorkoutDetailPage() {
     () => workouts.find((item) => item.id === params.workoutId) ?? null,
     [workouts, params.workoutId],
   );
+  const isOwner = workout ? workout.ownerProfileId === params.id : true;
+  const ownerProfile = useMemo(
+    () => (workout ? profiles.find((item) => item.id === workout.ownerProfileId) ?? null : null),
+    [profiles, workout],
+  );
 
   const workoutSessions = useMemo(
     () => sessions.filter((session) => session.workoutId === params.workoutId),
@@ -79,10 +84,15 @@ export default function WorkoutDetailPage() {
   async function handleSync(syncFields: Set<PersonalExerciseField>) {
     if (!workout || !pendingEdit) return;
     try {
-      await propagateWorkoutEdit(params.id, params.workoutId, pendingEdit, workout.linkedWorkouts, syncFields, {
-        profileId: params.id,
-        name: profile?.name ?? "Alguém",
-      });
+      await propagateWorkoutEdit(
+        params.id,
+        params.workoutId,
+        pendingEdit,
+        workout.linkedWorkouts,
+        syncFields,
+        { profileId: params.id, name: profile?.name ?? "Alguém" },
+        workout.ownerProfileId,
+      );
       toast.success("Treino atualizado e sincronizado com os perfis vinculados!");
       setPendingEdit(null);
       setEditing(false);
@@ -134,6 +144,7 @@ export default function WorkoutDetailPage() {
       <div>
         <SectionLabel>Editar treino</SectionLabel>
         <h2 className="mt-2 text-2xl font-semibold text-white">{workout.name}</h2>
+        <p className="mt-1 text-sm text-slate-400">Criado por {isOwner ? "você" : (ownerProfile?.name ?? "alguém")}</p>
 
         {linkedProfiles.length > 0 ? (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-4 py-2.5 text-xs text-slate-200">
@@ -145,7 +156,13 @@ export default function WorkoutDetailPage() {
                 {profile.name}
               </span>
             ))}
-            <span className="text-slate-400">— exercícios e ordem sincronizam sempre; carga, reps etc. você escolhe ao salvar.</span>
+            {isOwner ? (
+              <span className="text-slate-400">— exercícios e ordem sincronizam sempre; carga, reps etc. você escolhe ao salvar.</span>
+            ) : (
+              <span className="text-amber-300">
+                — você não criou este treino, então salvar aqui desfaz o vínculo dessa cópia.
+              </span>
+            )}
           </div>
         ) : null}
 
@@ -158,14 +175,26 @@ export default function WorkoutDetailPage() {
           />
         </Card>
 
-        <LinkEditChoiceModal
-          open={pendingEdit !== null}
-          workoutId={params.workoutId}
-          linkedProfiles={linkedProfiles}
-          onClose={() => setPendingEdit(null)}
-          onSync={handleSync}
-          onUnlinkAndSave={handleUnlinkAndSave}
-        />
+        {isOwner ? (
+          <LinkEditChoiceModal
+            open={pendingEdit !== null}
+            workoutId={params.workoutId}
+            linkedProfiles={linkedProfiles}
+            onClose={() => setPendingEdit(null)}
+            onSync={handleSync}
+            onUnlinkAndSave={handleUnlinkAndSave}
+          />
+        ) : (
+          <ConfirmDialog
+            open={pendingEdit !== null}
+            title="Desfazer vínculo e salvar"
+            description="Você não é quem criou este treino vinculado, então não dá pra sincronizar — só é possível salvar essa cópia sozinha, o que desfaz o vínculo dela com o grupo. Continuar?"
+            confirmLabel="Salvar e desvincular"
+            danger
+            onClose={() => setPendingEdit(null)}
+            onConfirm={handleUnlinkAndSave}
+          />
+        )}
       </div>
     );
   }
@@ -184,6 +213,8 @@ export default function WorkoutDetailPage() {
             {workout.lastPerformedAt
               ? `Última vez: ${formatDate(workout.lastPerformedAt)}`
               : "Ainda não realizado"}
+            {" · "}
+            Criado por {isOwner ? "você" : (ownerProfile?.name ?? "alguém")}
           </p>
           {workout.linkedWorkouts.length > 0 ? (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -204,6 +235,11 @@ export default function WorkoutDetailPage() {
                   </span>
                 );
               })}
+              {!isOwner ? (
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-slate-500">
+                  Cópia vinculada
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
