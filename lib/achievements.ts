@@ -28,9 +28,7 @@ import type { WorkoutSession } from "@/types/session";
 import type { Run } from "@/types/run";
 import type { BodyMeasurement } from "@/types/measurement";
 
-import { bestStreak, longestSingleRun, recordDates, totalDistance } from "./stats";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { bestStreak, gapIsWeekendOnly, longestSingleRun, recordDates, totalDistance } from "./stats";
 
 export type Achievement = {
   id: string;
@@ -73,7 +71,10 @@ function singleRunDistanceDate(runs: Run[], thresholdKm: number): number | null 
   return hit ? hit.date : null;
 }
 
-/** Date the streak first reached `thresholdDays` consecutive active days, anywhere in history. */
+/** Date the streak first reached `thresholdDays` consecutive active days,
+ * anywhere in history — same weekend-doesn't-break rule as `bestStreak`, so
+ * this stays in sync with it (otherwise `progress` could show the target
+ * reached while this never finds a matching unlock date). */
 function streakDate(sessions: WorkoutSession[], runs: Run[], thresholdDays: number): number | null {
   const activityDays = new Set<number>();
   for (const session of sessions) activityDays.add(startOfDay(session.date));
@@ -81,18 +82,12 @@ function streakDate(sessions: WorkoutSession[], runs: Run[], thresholdDays: numb
   if (activityDays.size === 0) return null;
 
   const sortedDays = Array.from(activityDays).sort((a, b) => a - b);
-  let runStart = sortedDays[0];
   let runLength = 1;
-  if (runLength >= thresholdDays) return runStart + (thresholdDays - 1) * DAY_MS;
+  if (runLength >= thresholdDays) return sortedDays[0];
 
   for (let i = 1; i < sortedDays.length; i++) {
-    if (sortedDays[i] - sortedDays[i - 1] === DAY_MS) {
-      runLength += 1;
-    } else {
-      runStart = sortedDays[i];
-      runLength = 1;
-    }
-    if (runLength >= thresholdDays) return runStart + (thresholdDays - 1) * DAY_MS;
+    runLength = gapIsWeekendOnly(sortedDays[i - 1], sortedDays[i]) ? runLength + 1 : 1;
+    if (runLength >= thresholdDays) return sortedDays[i];
   }
   return null;
 }
@@ -167,7 +162,7 @@ const DEFS: Def[] = [
     (n, i): Def => ({
       id: `streak-${n}`,
       title: `${n} dias seguidos`,
-      description: `Mantenha uma sequência de ${n} dias`,
+      description: `Mantenha uma sequência de ${n} dias (fins de semana não contam contra você)`,
       icon: STREAK_ICONS[i],
       unlockedAt: (ctx) => streakDate(ctx.sessions, ctx.runs, n),
       progress: (ctx) => ({ current: bestStreak(ctx.sessions, ctx.runs), target: n, unit: "dias" }),

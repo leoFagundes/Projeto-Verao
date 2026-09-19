@@ -230,6 +230,11 @@ const CONTENT: Record<TabId, ReactNode> = {
           São desbloqueadas automaticamente (recordes de carga, sequências de dias, marcos de distância etc.) e
           aparecem numa tela de celebração assim que acontecem, além de ficarem guardadas na Visão geral.
         </P>
+        <P>
+          A sequência de dias treinando não quebra no fim de semana: só um dia de semana (segunda a sexta) sem
+          treino ou corrida derruba a contagem. Sábado ou domingo sem atividade não conta contra você — mas se
+          treinar no fim de semana, esse dia entra na sequência normalmente.
+        </P>
       </div>
       <div className="space-y-2">
         <H>Painel geral</H>

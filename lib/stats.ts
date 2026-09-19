@@ -10,6 +10,25 @@ function startOfDay(timestamp: number) {
   return date.getTime();
 }
 
+export function isWeekend(timestamp: number) {
+  const day = new Date(timestamp).getDay();
+  return day === 0 || day === 6;
+}
+
+/** Whether every day strictly between two active days is a weekend day —
+ * i.e. the gap between them is only Saturday/Sunday, nothing more. Exported
+ * so `streakDate` in achievements.ts can stay in sync with `bestStreak`'s
+ * notion of an unbroken run. */
+export function gapIsWeekendOnly(previousDay: number, nextDay: number) {
+  for (let cursor = previousDay + DAY_MS; cursor < nextDay; cursor += DAY_MS) {
+    if (!isWeekend(cursor)) return false;
+  }
+  return true;
+}
+
+/** Streaks don't break over a weekend with no activity — only missing a
+ * weekday resets it, so training Mon-Fri counts the same as training every
+ * single day. A weekend that WAS trained on still counts normally. */
 export function computeStreak(sessions: WorkoutSession[], runs: Run[]) {
   const activityDays = new Set<number>();
   for (const session of sessions) activityDays.add(startOfDay(session.date));
@@ -18,15 +37,29 @@ export function computeStreak(sessions: WorkoutSession[], runs: Run[]) {
   if (activityDays.size === 0) return 0;
 
   let cursor = startOfDay(Date.now());
+  // Grace period: if today hasn't been logged yet, the streak can still be
+  // "alive" through the most recent active day, skipping past a free
+  // (inactive) weekend to find it — otherwise it would drop to 0 every
+  // morning before training, or every Monday before a weekday off.
   if (!activityDays.has(cursor)) {
-    cursor -= DAY_MS;
-    if (!activityDays.has(cursor)) return 0;
+    let probe = cursor - DAY_MS;
+    while (isWeekend(probe) && !activityDays.has(probe)) probe -= DAY_MS;
+    if (!activityDays.has(probe)) return 0;
+    cursor = probe;
   }
 
   let streak = 0;
-  while (activityDays.has(cursor)) {
-    streak += 1;
-    cursor -= DAY_MS;
+  while (true) {
+    if (activityDays.has(cursor)) {
+      streak += 1;
+      cursor -= DAY_MS;
+      continue;
+    }
+    if (isWeekend(cursor)) {
+      cursor -= DAY_MS;
+      continue;
+    }
+    break;
   }
 
   return streak;
@@ -34,7 +67,8 @@ export function computeStreak(sessions: WorkoutSession[], runs: Run[]) {
 
 /** Longest-ever run of consecutive active days, anywhere in history — unlike
  * `computeStreak` (which only counts the streak ending today), this never
- * drops once earned, so it's safe to use for a permanent achievement. */
+ * drops once earned, so it's safe to use for a permanent achievement. Same
+ * weekend-doesn't-break rule as `computeStreak`. */
 export function bestStreak(sessions: WorkoutSession[], runs: Run[]) {
   const activityDays = new Set<number>();
   for (const session of sessions) activityDays.add(startOfDay(session.date));
@@ -45,7 +79,7 @@ export function bestStreak(sessions: WorkoutSession[], runs: Run[]) {
   let best = 1;
   let current = 1;
   for (let i = 1; i < sortedDays.length; i++) {
-    if (sortedDays[i] - sortedDays[i - 1] === DAY_MS) {
+    if (gapIsWeekendOnly(sortedDays[i - 1], sortedDays[i])) {
       current += 1;
       best = Math.max(best, current);
     } else {

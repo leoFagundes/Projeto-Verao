@@ -102,7 +102,7 @@ export default function ProfileOverviewPage() {
         <StatTile
           label="Sequência"
           value={`${streak}d`}
-          hint="Dias seguidos"
+          hint="Fins de semana não quebram"
           icon={<Flame className="h-4 w-4" style={{ color: "var(--accent)" }} />}
         />
       </div>
