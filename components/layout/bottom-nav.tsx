@@ -152,7 +152,7 @@ export function BottomNav({ profileId }: { profileId: string }) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 h-[76px] sm:hidden">
-      <div className="relative mx-auto h-full max-w-lg">
+      <div className="relative mx-auto h-full ">
         <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
@@ -179,7 +179,7 @@ export function BottomNav({ profileId }: { profileId: string }) {
               />
             ))}
           </div>
-          <div className="w-24 shrink-0" aria-hidden="true" />
+          <div className=" flex-1 shrink-0" aria-hidden="true" />
           <div className="flex flex-1 items-stretch justify-around gap-1">
             {right.map((tab) => (
               <SideTab
