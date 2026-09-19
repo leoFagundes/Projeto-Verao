@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { HelpModal } from "@/components/layout/help-modal";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useProfiles } from "@/lib/hooks/use-profiles";
 
 export default function HomePage() {
@@ -23,28 +24,34 @@ export default function HomePage() {
           title="Seu espaço de treino"
           action={
             <div className="flex items-center gap-2">
-              <Link
-                href="/painel"
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
-                aria-label="Ver painel geral de todos os perfis"
-              >
-                <Trophy className="h-5 w-5" />
-              </Link>
-              <Link
-                href="/admin"
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
-                aria-label="Administrar perfis"
-              >
-                <Settings className="h-5 w-5" />
-              </Link>
-              <button
-                type="button"
-                onClick={() => setHelpOpen(true)}
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
-                aria-label="Como o app funciona"
-              >
-                <HelpCircle className="h-5 w-5" />
-              </button>
+              <Tooltip label="Painel geral" align="right">
+                <Link
+                  href="/painel"
+                  className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
+                  aria-label="Ver painel geral de todos os perfis"
+                >
+                  <Trophy className="h-5 w-5" />
+                </Link>
+              </Tooltip>
+              <Tooltip label="Administrar perfis" align="right">
+                <Link
+                  href="/admin"
+                  className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
+                  aria-label="Administrar perfis"
+                >
+                  <Settings className="h-5 w-5" />
+                </Link>
+              </Tooltip>
+              <Tooltip label="Como o app funciona" align="right">
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(true)}
+                  className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-white transition hover:border-[var(--accent)]"
+                  aria-label="Como o app funciona"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </button>
+              </Tooltip>
             </div>
           }
         />

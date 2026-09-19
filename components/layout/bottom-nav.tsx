@@ -49,10 +49,10 @@ type Tab = ReturnType<typeof tabsFor>[number];
 
 function SideTab({ tab, active }: { tab: Tab; active: boolean }) {
   return (
-    <Link href={tab.href} className="relative flex justify-center">
+    <Link href={tab.href} className="relative flex justify-center pb-2">
       <motion.div
         whileTap={{ scale: 0.93 }}
-        className="relative flex flex-col items-center gap-0.5 px-2 py-2"
+        className="relative flex flex-col items-center gap-0.5 px-5 py-2"
       >
         {active ? (
           <motion.span
@@ -170,7 +170,7 @@ export function BottomNav({ profileId }: { profileId: string }) {
         </svg>
 
         <div className="relative flex h-full items-stretch gap-1 px-2 pb-[env(safe-area-inset-bottom)] pt-[12px]">
-          <div className="flex flex-1 items-stretch justify-around gap-1">
+          <div className="flex flex-1 items-stretch justify-around gap-1 ">
             {left.map((tab) => (
               <SideTab
                 key={tab.href}
