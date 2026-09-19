@@ -13,6 +13,31 @@ export function formatDate(timestamp: number) {
   });
 }
 
+/** Calendar-day difference (not just ms/86400000) so e.g. 11pm yesterday to
+ * 1am today still reads "Ontem" instead of "Hoje". */
+export function formatDaysAgo(timestamp: number) {
+  const startOfDay = (value: number) => {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  };
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(timestamp)) / 86_400_000);
+
+  if (days <= 0) return "Hoje";
+  if (days === 1) return "Ontem";
+  if (days < 7) return `Há ${days} dias`;
+  if (days < 30) {
+    const weeks = Math.round(days / 7);
+    return weeks === 1 ? "Há 1 semana" : `Há ${weeks} semanas`;
+  }
+  if (days < 365) {
+    const months = Math.round(days / 30);
+    return months === 1 ? "Há 1 mês" : `Há ${months} meses`;
+  }
+  const years = Math.round(days / 365);
+  return years === 1 ? "Há 1 ano" : `Há ${years} anos`;
+}
+
 export function formatDateWithYear(timestamp: number) {
   return new Date(timestamp).toLocaleDateString("pt-BR", {
     day: "2-digit",

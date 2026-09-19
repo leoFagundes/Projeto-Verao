@@ -24,20 +24,35 @@ function tabsFor(profileId: string) {
     {
       href: `/perfil/${profileId}/visao-geral`,
       label: "Visão geral",
+      shortLabel: "Visão geral",
       icon: ChartIcon,
     },
     {
       href: `/perfil/${profileId}/treinos`,
       label: "Treinos",
+      shortLabel: "Treinos",
       icon: DumbbellIcon,
     },
-    { href: `/perfil/${profileId}/corridas`, label: "Corridas", icon: RunIcon },
+    {
+      href: `/perfil/${profileId}/corridas`,
+      label: "Corridas",
+      shortLabel: "Corridas",
+      icon: RunIcon,
+    },
     {
       href: `/perfil/${profileId}/alimentacao`,
       label: "Alimentação",
+      // Shortened only for the cramped bottom nav — the full name is used
+      // everywhere else (page titles, the desktop top tabs).
+      shortLabel: "Dieta",
       icon: MealIcon,
     },
-    { href: `/perfil/${profileId}/medidas`, label: "Medidas", icon: ScaleIcon },
+    {
+      href: `/perfil/${profileId}/medidas`,
+      label: "Medidas",
+      shortLabel: "Medidas",
+      icon: ScaleIcon,
+    },
   ];
 }
 
@@ -49,16 +64,16 @@ type Tab = ReturnType<typeof tabsFor>[number];
 
 function SideTab({ tab, active }: { tab: Tab; active: boolean }) {
   return (
-    <Link href={tab.href} className="relative flex justify-center pb-2">
+    <Link href={tab.href} className="relative flex flex-1 justify-center pb-2 ">
       <motion.div
         whileTap={{ scale: 0.93 }}
-        className="relative flex flex-col items-center gap-0.5 px-5 py-2"
+        className="relative flex flex-col items-center gap-0.5 px-4 py-3"
       >
         {active ? (
           <motion.span
             layoutId="bottom-nav-active-pill"
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className="absolute inset-1 rounded-2xl"
+            className="absolute inset-0.5 rounded-2xl"
             style={{ background: "var(--accent-soft)" }}
           />
         ) : null}
@@ -74,12 +89,12 @@ function SideTab({ tab, active }: { tab: Tab; active: boolean }) {
         </span>
         <span
           className={cn(
-            "relative z-10 whitespace-nowrap text-[10px] font-medium transition-colors",
+            "relative z-10 whitespace-nowrap text-[9.5px] font-medium leading-none transition-colors",
             active ? "" : "text-slate-500",
           )}
           style={active ? { color: "var(--accent)" } : undefined}
         >
-          {tab.label}
+          {tab.shortLabel}
         </span>
       </motion.div>
     </Link>
@@ -170,7 +185,7 @@ export function BottomNav({ profileId }: { profileId: string }) {
         </svg>
 
         <div className="relative flex h-full items-stretch gap-1 px-2 pb-[env(safe-area-inset-bottom)] pt-[12px]">
-          <div className="flex flex-1 items-stretch justify-around gap-1 ">
+          <div className="flex flex-1 items-stretch gap-1">
             {left.map((tab) => (
               <SideTab
                 key={tab.href}
@@ -179,8 +194,8 @@ export function BottomNav({ profileId }: { profileId: string }) {
               />
             ))}
           </div>
-          <div className=" flex-1 shrink-0" aria-hidden="true" />
-          <div className="flex flex-1 items-stretch justify-around gap-1">
+          <div className="w-20 shrink-0" aria-hidden="true" />
+          <div className="flex flex-1 items-stretch gap-1">
             {right.map((tab) => (
               <SideTab
                 key={tab.href}
