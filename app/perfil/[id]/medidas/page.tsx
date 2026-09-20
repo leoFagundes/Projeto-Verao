@@ -10,6 +10,7 @@ import { GoalCard } from "@/components/measurements/goal-card";
 import { GoalFormModal } from "@/components/measurements/goal-form-modal";
 import { MeasurementCard } from "@/components/measurements/measurement-card";
 import { MeasurementCompareModal } from "@/components/measurements/measurement-compare-modal";
+import { MeasurementDetailModal } from "@/components/measurements/measurement-detail-modal";
 import { MeasurementFormModal } from "@/components/measurements/measurement-form-modal";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { deleteMeasurement } from "@/lib/firebase/measurements";
 import { useGoals } from "@/lib/hooks/use-goals";
 import { useMeasurements } from "@/lib/hooks/use-measurements";
+import { useProfile } from "@/lib/hooks/use-profile";
 import { latestBmi, measurementSeries, measurementTrend } from "@/lib/stats";
 import { cn, formatDateLong } from "@/lib/utils";
 import { MEASUREMENT_FIELDS, type BodyMeasurement, type MeasurementFieldKey } from "@/types/measurement";
@@ -28,6 +30,7 @@ export default function MeasurementsPage() {
   const params = useParams<{ id: string }>();
   const { measurements, loading } = useMeasurements(params.id);
   const { goals } = useGoals(params.id);
+  const { profile } = useProfile(params.id);
 
   const [formOpen, setFormOpen] = useState(false);
   const [goalFormOpen, setGoalFormOpen] = useState(false);
@@ -35,27 +38,13 @@ export default function MeasurementsPage() {
   const [pendingDelete, setPendingDelete] = useState<BodyMeasurement | null>(null);
   const [selectedField, setSelectedField] = useState<MeasurementFieldKey>("weightKg");
   const [viewingPhotosFor, setViewingPhotosFor] = useState<BodyMeasurement | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [viewingDetail, setViewingDetail] = useState<BodyMeasurement | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
 
   const entriesWithPhotos = useMemo(
     () => [...measurements].filter((m) => m.photos.length > 0).sort((a, b) => a.date - b.date),
     [measurements],
   );
-
-  function toggleCompareMode() {
-    setCompareMode((current) => !current);
-    setSelectedIds([]);
-  }
-
-  function toggleSelected(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
-  }
-
-  const selectedMeasurements = measurements.filter((m) => selectedIds.includes(m.id));
 
   const availableFields = useMemo(
     () => MEASUREMENT_FIELDS.filter((field) => measurements.some((m) => m[field.key] != null)),
@@ -85,24 +74,13 @@ export default function MeasurementsPage() {
         </div>
         <div className="flex shrink-0 gap-2">
           {measurements.length >= 2 ? (
-            <Button variant="secondary" onClick={toggleCompareMode}>
-              {compareMode ? "Cancelar" : "Comparar"}
+            <Button variant="secondary" onClick={() => setCompareOpen(true)}>
+              Comparar
             </Button>
           ) : null}
           <Button onClick={() => setFormOpen(true)}>+ Registrar</Button>
         </div>
       </div>
-
-      {compareMode ? (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-2.5">
-          <p className="text-xs text-slate-200">
-            {selectedIds.length} selecionada{selectedIds.length === 1 ? "" : "s"}
-          </p>
-          <Button size="sm" disabled={selectedIds.length === 0} onClick={() => setCompareOpen(true)}>
-            Comparar
-          </Button>
-        </div>
-      ) : null}
 
       {measurements.length > 0 ? (
         <>
@@ -141,11 +119,9 @@ export default function MeasurementsPage() {
                   key={measurement.id}
                   measurement={measurement}
                   index={index}
+                  onView={() => setViewingDetail(measurement)}
                   onEdit={() => setEditing(measurement)}
                   onDelete={() => setPendingDelete(measurement)}
-                  selectable={compareMode}
-                  selected={selectedIds.includes(measurement.id)}
-                  onToggleSelect={() => toggleSelected(measurement.id)}
                 />
               ))}
             </div>
@@ -299,10 +275,13 @@ export default function MeasurementsPage() {
         onClose={() => setViewingPhotosFor(null)}
       />
 
-      <MeasurementCompareModal
-        open={compareOpen}
-        onClose={() => setCompareOpen(false)}
-        measurements={selectedMeasurements}
+      <MeasurementCompareModal open={compareOpen} onClose={() => setCompareOpen(false)} measurements={measurements} />
+
+      <MeasurementDetailModal
+        measurement={viewingDetail}
+        profile={profile}
+        open={viewingDetail !== null}
+        onClose={() => setViewingDetail(null)}
       />
 
       <ConfirmDialog

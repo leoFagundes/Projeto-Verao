@@ -76,49 +76,49 @@ export function PhotoCompareSlider({
             initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
-            ref={containerRef}
             onClick={(event) => event.stopPropagation()}
-            onPointerDown={(event) => {
-              draggingRef.current = true;
-              (event.target as Element).setPointerCapture(event.pointerId);
-              updateFromClientX(event.clientX);
-            }}
-            onPointerMove={(event) => {
-              if (draggingRef.current) updateFromClientX(event.clientX);
-            }}
-            onPointerUp={() => {
-              draggingRef.current = false;
-            }}
-            className="relative aspect-[3/4] w-full max-w-md touch-none select-none overflow-hidden rounded-2xl shadow-2xl"
+            className="w-full max-w-md"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={after} alt={afterLabel ?? "Depois"} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
-            <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={before} alt={beforeLabel ?? "Antes"} className="h-full w-full object-cover" draggable={false} />
-            </div>
-
-            {beforeLabel ? (
-              <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
-                {beforeLabel}
-              </span>
-            ) : null}
-            {afterLabel ? (
-              <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
-                {afterLabel}
-              </span>
-            ) : null}
-
             <div
-              className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-              style={{ left: `${position}%` }}
-            />
-            <div
-              className="absolute top-1/2 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-slate-900 shadow-lg"
-              style={{ left: `${position}%` }}
+              ref={containerRef}
+              onPointerDown={(event) => {
+                draggingRef.current = true;
+                (event.target as Element).setPointerCapture(event.pointerId);
+                updateFromClientX(event.clientX);
+              }}
+              onPointerMove={(event) => {
+                if (draggingRef.current) updateFromClientX(event.clientX);
+              }}
+              onPointerUp={() => {
+                draggingRef.current = false;
+              }}
+              className="relative aspect-[3/4] w-full touch-none select-none overflow-hidden rounded-2xl shadow-2xl"
             >
-              <ArrowLeftRight className="h-4 w-4" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={after} alt={afterLabel ?? "Depois"} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+              <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={before} alt={beforeLabel ?? "Antes"} className="h-full w-full object-cover" draggable={false} />
+              </div>
+
+              <div
+                className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                style={{ left: `${position}%` }}
+              />
+              <div
+                className="absolute top-1/2 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-slate-900 shadow-lg"
+                style={{ left: `${position}%` }}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+              </div>
             </div>
+
+            {beforeLabel || afterLabel ? (
+              <div className="mt-3 space-y-1 text-center">
+                {beforeLabel ? <p className="text-xs font-medium text-white/80">Antes: {beforeLabel}</p> : null}
+                {afterLabel ? <p className="text-xs font-medium text-white/80">Depois: {afterLabel}</p> : null}
+              </div>
+            ) : null}
           </motion.div>
         </motion.div>
       ) : null}

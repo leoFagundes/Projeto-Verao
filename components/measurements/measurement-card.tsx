@@ -1,28 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
 
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { MEASUREMENT_FIELDS } from "@/types/measurement";
 import type { BodyMeasurement } from "@/types/measurement";
 
 export function MeasurementCard({
   measurement,
   index,
+  onView,
   onEdit,
   onDelete,
-  selectable,
-  selected,
-  onToggleSelect,
 }: {
   measurement: BodyMeasurement;
   index: number;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  selectable?: boolean;
-  selected?: boolean;
-  onToggleSelect?: () => void;
 }) {
   const extras = MEASUREMENT_FIELDS.filter((field) => field.key !== "weightKg").flatMap((field) => {
     const value = measurement[field.key];
@@ -30,22 +26,14 @@ export function MeasurementCard({
   });
   const cover = measurement.photos[0] ?? null;
 
-  const content = (
-    <>
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.3 }}
+      className="flex flex-col gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4 transition sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="flex items-center gap-3">
-        {selectable ? (
-          <span
-            aria-hidden="true"
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 text-xs font-bold transition"
-            style={
-              selected
-                ? { borderColor: "var(--accent)", backgroundColor: "var(--accent)", color: "var(--bg)" }
-                : { borderColor: "var(--border-strong)", color: "transparent" }
-            }
-          >
-            <Check className="h-3.5 w-3.5" />
-          </span>
-        ) : null}
         {cover ? (
           <div className="relative h-12 w-12 shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -83,48 +71,16 @@ export function MeasurementCard({
         <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs text-slate-300">
           {formatDate(measurement.date)}
         </span>
-        {!selectable ? (
-          <>
-            <button type="button" onClick={onEdit} className="text-sm text-slate-300 hover:text-white">
-              Editar
-            </button>
-            <button type="button" onClick={onDelete} className="text-sm text-red-300 hover:text-red-200">
-              Remover
-            </button>
-          </>
-        ) : null}
+        <button type="button" onClick={onView} className="text-sm text-slate-300 hover:text-white">
+          Visualizar
+        </button>
+        <button type="button" onClick={onEdit} className="text-sm text-slate-300 hover:text-white">
+          Editar
+        </button>
+        <button type="button" onClick={onDelete} className="text-sm text-red-300 hover:text-red-200">
+          Remover
+        </button>
       </div>
-    </>
-  );
-
-  const className = cn(
-    "flex flex-col gap-3 rounded-[24px] border p-4 sm:flex-row sm:items-center sm:justify-between transition",
-    selected ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)] bg-[var(--surface)]",
-  );
-
-  if (selectable) {
-    return (
-      <motion.button
-        type="button"
-        onClick={onToggleSelect}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.3 }}
-        className={cn(className, "w-full text-left")}
-      >
-        {content}
-      </motion.button>
-    );
-  }
-
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.3 }}
-      className={className}
-    >
-      {content}
     </motion.article>
   );
 }

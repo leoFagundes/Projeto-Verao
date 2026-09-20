@@ -1,9 +1,11 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { AchievementUnlockModal } from "@/components/achievements/achievement-unlock-modal";
+import { MeasurementInfoModal } from "@/components/measurements/measurement-info-modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
@@ -14,7 +16,23 @@ import { useMeasurements } from "@/lib/hooks/use-measurements";
 import { useRuns } from "@/lib/hooks/use-runs";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { formatDateInput, parseDateInput } from "@/lib/utils";
-import type { BodyMeasurement, BodyMeasurementInput } from "@/types/measurement";
+import type { BodyMeasurement, BodyMeasurementInput, MeasurementFieldKey } from "@/types/measurement";
+
+function InfoLabel({ text, onInfo }: { text: string; onInfo: () => void }) {
+  return (
+    <span className="flex items-center gap-1">
+      {text}
+      <button
+        type="button"
+        onClick={onInfo}
+        className="text-slate-500 transition hover:text-[var(--accent)]"
+        aria-label={`O que é ${text}?`}
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+    </span>
+  );
+}
 
 function numOrNull(value: string) {
   return value.trim() === "" ? null : Number(value);
@@ -60,6 +78,7 @@ export function MeasurementFormModal({
     ),
   );
   const [submitting, setSubmitting] = useState(false);
+  const [infoField, setInfoField] = useState<MeasurementFieldKey | null>(null);
 
   const hasAnyValue =
     [weightKg, heightCm, bodyFatPct, muscleMassPct, waterPct, boneMassKg, visceralFat, bmrKcal].some(
@@ -177,7 +196,7 @@ export function MeasurementFormModal({
         {showMore ? (
           <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Gordura corporal (%)">
+              <Field label={<InfoLabel text="Gordura corporal (%)" onInfo={() => setInfoField("bodyFatPct")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -187,7 +206,7 @@ export function MeasurementFormModal({
                   placeholder="Opcional"
                 />
               </Field>
-              <Field label="Massa muscular (%)">
+              <Field label={<InfoLabel text="Massa muscular (%)" onInfo={() => setInfoField("muscleMassPct")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -197,7 +216,7 @@ export function MeasurementFormModal({
                   placeholder="Opcional"
                 />
               </Field>
-              <Field label="Água corporal (%)">
+              <Field label={<InfoLabel text="Água corporal (%)" onInfo={() => setInfoField("waterPct")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -207,7 +226,7 @@ export function MeasurementFormModal({
                   placeholder="Opcional"
                 />
               </Field>
-              <Field label="Massa óssea (kg)">
+              <Field label={<InfoLabel text="Massa óssea (kg)" onInfo={() => setInfoField("boneMassKg")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -217,7 +236,7 @@ export function MeasurementFormModal({
                   placeholder="Opcional"
                 />
               </Field>
-              <Field label="Gordura visceral">
+              <Field label={<InfoLabel text="Gordura visceral" onInfo={() => setInfoField("visceralFat")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -227,7 +246,7 @@ export function MeasurementFormModal({
                   placeholder="Opcional"
                 />
               </Field>
-              <Field label="Metabolismo basal (kcal)">
+              <Field label={<InfoLabel text="Metabolismo basal (kcal)" onInfo={() => setInfoField("bmrKcal")} />}>
                 <Input
                   type="number"
                   min={0}
@@ -263,6 +282,8 @@ export function MeasurementFormModal({
           onClose();
         }}
       />
+
+      <MeasurementInfoModal field={infoField} open={infoField !== null} onClose={() => setInfoField(null)} />
     </Modal>
   );
 }
