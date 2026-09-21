@@ -17,11 +17,15 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * counting into "overtime" (past the target) if the set is held longer,
  * since exceeding a hold time is a normal, good outcome.
  *
- * This is purely a timing aid — it never writes anything back. The target
- * duration for each set is a manually-edited field (same idea as load), and
- * only changes when the user types a new value there; the clock reaching a
- * number never overwrites it. Every open is also a fresh attempt: it always
- * starts counting from zero, never resuming a previous run.
+ * Mostly a timing aid that doesn't write anything back — the target duration
+ * for each set is a manually-edited field (same idea as load), and only
+ * changes when the user types a new value there; the clock reaching a number
+ * never overwrites it. The one exception: tapping the checkmark once the
+ * target has been reached (or passed) marks that specific set as done,
+ * exactly as if it had been checked off by hand. Tapping it before that just
+ * closes without marking anything, same as the X. Every open is also a
+ * fresh attempt: it always starts counting from zero, never resuming a
+ * previous run.
  */
 export function SetTimerModal({
   open,
@@ -29,12 +33,16 @@ export function SetTimerModal({
   setLabel,
   targetSeconds,
   onClose,
+  onComplete,
 }: {
   open: boolean;
   exerciseName: string;
   setLabel: string;
   targetSeconds: number;
   onClose: () => void;
+  /** Called when the checkmark is tapped after the target has been reached
+   * (or passed) — marks this set as done. */
+  onComplete: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -123,6 +131,11 @@ export function SetTimerModal({
   const hasTarget = targetSeconds > 0;
   const overtime = hasTarget && elapsed >= targetSeconds;
   const remaining = hasTarget ? Math.max(0, targetSeconds - elapsed) : elapsed;
+
+  function handleConfirm() {
+    if (overtime) onComplete();
+    onClose();
+  }
 
   if (typeof document === "undefined") return null;
 
@@ -217,9 +230,9 @@ export function SetTimerModal({
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleConfirm}
               className="grid h-14 w-14 place-items-center rounded-full border border-[var(--accent)] text-[var(--accent)] transition hover:bg-[var(--accent-soft)]"
-              aria-label="Fechar"
+              aria-label={overtime ? "Marcar série como concluída" : "Fechar"}
             >
               <Check className="h-5 w-5" />
             </button>

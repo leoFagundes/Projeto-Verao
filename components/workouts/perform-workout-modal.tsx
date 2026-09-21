@@ -39,16 +39,22 @@ function visibleExercises(workout: Workout) {
 }
 
 function buildInitialLogs(workout: Workout, sessions: WorkoutSession[]): SessionExerciseLog[] {
+  // Only carry over weight/reps/duration from sessions of THIS workout — the
+  // same catalog exercise can appear in more than one workout plan, and what
+  // you lifted in one shouldn't bleed into another's prefill as if it were
+  // one single global "exercise" state.
+  const workoutSessions = sessions.filter((session) => session.workoutId === workout.id);
+
   return visibleExercises(workout).map((exercise) => {
-    const lastWeight = lastWeightForExercise(sessions, exercise.exerciseId);
+    const lastWeight = lastWeightForExercise(workoutSessions, exercise.exerciseId);
     const weight = exercise.trackWeight ? lastWeight ?? exercise.weight : null;
-    const lastDuration = lastDurationForExercise(sessions, exercise.exerciseId);
+    const lastDuration = lastDurationForExercise(workoutSessions, exercise.exerciseId);
     // Same convention as weight: prefill with the last time actually held, or
     // fall back to the plan's target — editable either way before marking done.
     const durationSeconds = exercise.measureType === "time" ? lastDuration ?? exercise.durationSeconds ?? 0 : null;
     // Same idea again for reps — remember what was actually typed last time
     // instead of always resetting to the plan's static target.
-    const reps = lastRepsForExercise(sessions, exercise.exerciseId) ?? exercise.reps;
+    const reps = lastRepsForExercise(workoutSessions, exercise.exerciseId) ?? exercise.reps;
     const sets: SetLog[] = Array.from({ length: Math.max(exercise.sets, 1) }, () => ({
       reps,
       weight,
@@ -863,6 +869,7 @@ export function PerformWorkoutModal({
                 setLabel={`Série ${activeTimer.setIndex + 1} de ${log.sets.length}`}
                 targetSeconds={set.durationSeconds ?? 0}
                 onClose={() => setActiveTimer(null)}
+                onComplete={() => updateSet(activeTimer.logId, activeTimer.setIndex, { done: true })}
               />
             );
           })()
