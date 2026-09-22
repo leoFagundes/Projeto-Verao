@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -77,7 +77,16 @@ export function ProfileShell({
               </div>
             </div>
 
-            <TopTabs profileId={profile.id} />
+            <div className="flex shrink-0 items-center gap-2">
+              <TopTabs profileId={profile.id} />
+              <Link
+                href={`/perfil/${profile.id}/configuracoes`}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-white transition hover:border-[var(--accent)]"
+                aria-label="Configurações do perfil"
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+            </div>
           </div>
         </header>
 

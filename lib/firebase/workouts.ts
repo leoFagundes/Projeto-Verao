@@ -243,6 +243,12 @@ export async function touchWorkoutPerformed(profileId: string, workoutId: string
   });
 }
 
+/** Whether an exercise is hidden is structural (like which exercises exist
+ * and their order), not a personal prescription field — so, same as
+ * `propagateWorkoutEdit`, it's the owner's call and always follows to every
+ * linked copy, no opt-in needed. A non-owner toggling it on their own copy
+ * only affects that copy — not everyone's problem, and too minor a change
+ * to warrant losing the link over. */
 export async function setExerciseHidden(
   profileId: string,
   workoutId: string,
@@ -257,6 +263,28 @@ export async function setExerciseHidden(
     exercises,
     updatedAt: Date.now(),
   });
+
+  if (workout.ownerProfileId !== profileId || workout.linkedWorkouts.length === 0) return;
+
+  await Promise.all(
+    workout.linkedWorkouts.map(async (ref) => {
+      try {
+        const targetDoc = doc(requireDb(), "profiles", ref.profileId, "workouts", ref.workoutId);
+        const targetSnap = await getDoc(targetDoc);
+        if (!targetSnap.exists()) return;
+        const targetData = targetSnap.data() as { exercises?: Record<string, unknown>[] };
+        const targetExercises = (targetData.exercises ?? []).map(normalizeStoredExercise).map((exercise) =>
+          exercise.id === exerciseId ? { ...exercise, hidden } : exercise,
+        );
+        await updateDoc(targetDoc, {
+          exercises: normalizeExercises(targetExercises),
+          updatedAt: Date.now(),
+        });
+      } catch {
+        // Best-effort — one unreachable linked profile shouldn't block the rest.
+      }
+    }),
+  );
 }
 
 export async function copyWorkout(

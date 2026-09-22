@@ -44,18 +44,53 @@ const CONTENT: Record<TabId, ReactNode> = {
         tela inicial, cada card é um perfil; basta tocar nele para entrar.
       </P>
       <div className="space-y-2">
-        <H>Criar e administrar perfis</H>
+        <H>Criar um perfil</H>
         <P>
-          Perfis são criados e gerenciados na área administrativa, aberta pelo ícone de engrenagem no canto superior
-          direito da tela inicial. Ali dá para definir nome, foto, um tema de cores (muda o visual do app para essa
-          pessoa) e uma senha opcional.
+          Qualquer pessoa pode criar o próprio perfil direto na tela inicial, pelo ícone de adicionar pessoa — sem
+          senha nenhuma, pensado pra quem não tem acesso à área administrativa. Dá pra definir nome, foto, um tema de
+          cores (muda o visual do app pra essa pessoa) e uma senha opcional.
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Área administrativa</H>
+        <P>
+          Aberta pelo ícone de engrenagem na tela inicial (protegida por uma senha própria, diferente da senha de
+          cada perfil). Além de criar perfis, é onde dá pra editar ou remover qualquer um, e onde fica o catálogo de
+          exercícios compartilhado (nome, instruções, vídeo e imagens de cada exercício, reaproveitado por todos os
+          treinos que o usam).
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Configurações do seu perfil</H>
+        <P>
+          De dentro de um perfil (já sem precisar da senha da área administrativa), o ícone de engrenagem no
+          cabeçalho abre as configurações dele: editar nome, foto, tema e senha, vincular uma conta Google e
+          controlar a sessão deste aparelho.
         </P>
       </div>
       <div className="space-y-2">
         <H>Senha do perfil</H>
         <P>
-          Quando definida, a senha só é pedida para editar ou remover aquele perfil na área administrativa — não é
-          necessária para entrar e treinar no dia a dia.
+          Quando definida, é pedida sempre que alguém for entrar nesse perfil — mas só uma vez a cada 24h neste
+          aparelho, não toda hora. A mesma senha também é reconfirmada se alguém tentar editar ou remover o perfil
+          pela área administrativa.
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Vincular uma conta Google</H>
+        <P>
+          Em Configurações, dá pra vincular uma conta Google ao perfil — totalmente opcional, e nunca necessário pro
+          dia a dia. Serve pra duas coisas: recuperar a senha na hora se esquecer (confirmando por essa conta, sem
+          precisar de ninguém com acesso à área administrativa), e entrar mais rápido, como alternativa à senha, na
+          tela de entrada do perfil.
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Controlar a sessão</H>
+        <P>
+          Também em Configurações: tanto a senha quanto a conta Google (quando vinculada) mantêm sua própria sessão
+          neste aparelho, cada uma com botões pra renovar (ganhar mais tempo sem digitar de novo) ou encerrar (pedir
+          de novo já na próxima vez) — independentes uma da outra.
         </P>
       </div>
       <div className="space-y-2">
@@ -112,6 +147,14 @@ const CONTENT: Record<TabId, ReactNode> = {
           Ao concluir, também é possível compartilhar essa sessão com outro perfil que tenha &quot;Receber treinos
           compartilhados&quot; ligado. Essa pessoa ganha o mesmo registro no histórico dela, mesmo sem ter esse plano
           de treino montado — é diferente de vincular o plano em si (veja a aba Vínculo).
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Copiar como texto</H>
+        <P>
+          No botão &quot;i&quot; de um treino (no card, na lista de treinos) tem a opção &quot;Copiar como texto&quot;
+          — copia o nome, os exercícios ativos com séries/reps, e os ocultos numa lista separada, prontos pra colar
+          em qualquer lugar (uma conversa, um bloco de notas etc.).
         </P>
       </div>
     </div>
@@ -202,17 +245,36 @@ const CONTENT: Record<TabId, ReactNode> = {
   medidas: (
     <div className="space-y-4">
       <P>
-        Registros de medidas corporais: peso, percentual de gordura e outras medidas — o IMC é calculado
-        automaticamente a partir do peso e da altura mais recentes.
+        Registros de medidas corporais: peso, percentual de gordura e outras medidas de bioimpedância — o IMC é
+        calculado automaticamente a partir do peso e da altura mais recentes.
       </P>
       <List
         items={[
           "Cada registro pode incluir fotos de progresso, reunidas numa linha do tempo.",
           "Dá para definir metas (ex.: chegar a um peso ou percentual de gordura específico) e acompanhar o progresso até elas.",
           "Um gráfico mostra a evolução de cada medida ao longo do tempo.",
-          "O modo \"Comparar\" coloca dois ou mais registros lado a lado para ver a diferença entre eles.",
+          "O botão \"Visualizar\" num registro mostra todos os campos preenchidos, com opção de compartilhar como imagem.",
         ]}
       />
+      <div className="space-y-2">
+        <H>Ícone &quot;i&quot; nos campos de bioimpedância</H>
+        <P>
+          Gordura corporal, massa muscular, água corporal, massa óssea, gordura visceral e metabolismo basal têm um
+          ícone &quot;i&quot; que explica o que a medida significa e mostra uma tabela de referência (por sexo e,
+          quando existe, faixa etária) — valores gerais da literatura, não um diagnóstico.
+        </P>
+      </div>
+      <div className="space-y-2">
+        <H>Comparar duas medidas</H>
+        <P>
+          O botão &quot;Comparar&quot; abre direto um modal pra escolher as duas datas, sem precisar rolar a tela.
+          Com fotos nas duas, dá pra ver lado a lado (com botão de baixar a imagem da comparação) ou num slider
+          arrastável. Os números que mudaram aparecem com seta pra cima ou pra baixo — verde quando é uma melhora e
+          vermelho quando não é, considerando que pra algumas medidas menos é melhor (gordura corporal, gordura
+          visceral) e pra outras mais é melhor (massa muscular, massa óssea); peso, água corporal e metabolismo basal
+          ficam sem cor de propósito, já que não dá pra dizer se subir ou descer é bom sem saber o objetivo de cada um.
+        </P>
+      </div>
     </div>
   ),
   geral: (

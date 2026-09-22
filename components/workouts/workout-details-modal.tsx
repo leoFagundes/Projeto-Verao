@@ -1,14 +1,16 @@
 "use client";
 
-import { Link2 } from "lucide-react";
+import { Check, Copy, Link2 } from "lucide-react";
 import NextLink from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Modal } from "@/components/ui/modal";
 import { useProfiles } from "@/lib/hooks/use-profiles";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { formatDate, formatDuration } from "@/lib/utils";
-import type { Workout } from "@/types/workout";
+import type { Exercise, Workout } from "@/types/workout";
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
@@ -17,6 +19,29 @@ function StatBlock({ label, value }: { label: string; value: string }) {
       <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em] text-slate-500">{label}</p>
     </div>
   );
+}
+
+function formatExerciseLine(exercise: Exercise) {
+  const measure = exercise.measureType === "time" ? `${exercise.durationSeconds ?? "—"}s` : exercise.reps;
+  const weight = exercise.trackWeight && exercise.weight ? ` · ${exercise.weight}kg` : "";
+  const group = exercise.muscleGroup ? ` (${exercise.muscleGroup})` : "";
+  return `- ${exercise.name}${group} — ${exercise.sets}x${measure}${weight}`;
+}
+
+/** Plain-text version of the workout, meant for pasting elsewhere (a chat,
+ * a notes app...) — active and hidden exercises are kept as separate
+ * sections, same distinction the app itself makes. */
+function buildWorkoutText(workout: Workout) {
+  const active = workout.exercises.filter((exercise) => !exercise.hidden);
+  const hidden = workout.exercises.filter((exercise) => exercise.hidden);
+
+  const lines = [workout.name, "", "Exercícios:", ...(active.length > 0 ? active.map(formatExerciseLine) : ["(nenhum)"])];
+
+  if (hidden.length > 0) {
+    lines.push("", "Ocultos:", ...hidden.map(formatExerciseLine));
+  }
+
+  return lines.join("\n");
 }
 
 /** A quick-glance card with every fact about a workout, without leaving the list —
@@ -32,12 +57,24 @@ export function WorkoutDetailsModal({
 }) {
   const { sessions } = useSessions(profileId);
   const { profiles } = useProfiles();
+  const [copied, setCopied] = useState(false);
   const workoutSessions = sessions.filter((session) => session.workoutId === workout.id);
   const activeExercises = workout.exercises.filter((exercise) => !exercise.hidden);
   const totalSets = activeExercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   const linkedProfiles = workout.linkedWorkouts
     .map((ref) => profiles.find((profile) => profile.id === ref.profileId))
     .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(buildWorkoutText(workout));
+      setCopied(true);
+      toast.success("Treino copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
 
   return (
     <Modal open onClose={onClose} title={workout.name}>
@@ -47,11 +84,21 @@ export function WorkoutDetailsModal({
         <StatBlock label="Vezes realizado" value={String(workoutSessions.length)} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-        <span>Criado em {formatDate(workout.createdAt)}</span>
-        <span>
-          {workout.lastPerformedAt ? `Última vez: ${formatDate(workout.lastPerformedAt)}` : "Ainda não realizado"}
-        </span>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+          <span>Criado em {formatDate(workout.createdAt)}</span>
+          <span>
+            {workout.lastPerformedAt ? `Última vez: ${formatDate(workout.lastPerformedAt)}` : "Ainda não realizado"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-[var(--accent)] hover:text-white"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-[var(--accent)]" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copiado!" : "Copiar como texto"}
+        </button>
       </div>
 
       {linkedProfiles.length > 0 ? (

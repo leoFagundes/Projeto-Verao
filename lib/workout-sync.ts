@@ -15,8 +15,6 @@ export const PERSONAL_FIELD_LABELS: Record<PersonalExerciseField, string> = {
   durationSeconds: "Duração alvo",
 };
 
-export const ALL_PERSONAL_FIELDS = new Set<PersonalExerciseField>(PERSONAL_EXERCISE_FIELDS);
-
 /**
  * Builds the exercises array to write to one linked profile. Structure —
  * which exercises exist, their order, superset links, which exercise-library

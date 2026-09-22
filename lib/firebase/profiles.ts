@@ -43,15 +43,17 @@ export function subscribeProfiles(
     (snapshot) => {
       onData(
         snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as Omit<Profile, "id" | "password" | "allowSharedWorkouts"> & {
+          const data = docSnap.data() as Omit<Profile, "id" | "password" | "allowSharedWorkouts" | "linkedAuth"> & {
             password?: string | null;
             allowSharedWorkouts?: boolean;
+            linkedAuth?: Profile["linkedAuth"];
           };
           return {
             id: docSnap.id,
             ...data,
             password: data.password ?? null,
             allowSharedWorkouts: data.allowSharedWorkouts ?? false,
+            linkedAuth: data.linkedAuth ?? null,
           };
         }),
       );
@@ -78,6 +80,10 @@ export async function updateProfile(
   if ("photoUrl" in input && input.photoUrl !== previousPhotoUrl) {
     await deleteImageIfOwned(previousPhotoUrl);
   }
+}
+
+export async function setProfileLinkedAuth(id: string, linkedAuth: Profile["linkedAuth"]) {
+  await updateDoc(doc(requireDb(), "profiles", id), { linkedAuth });
 }
 
 export async function deleteProfile(profile: Profile) {

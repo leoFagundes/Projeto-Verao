@@ -7,7 +7,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import {
-  ALL_PERSONAL_FIELDS,
   PERSONAL_EXERCISE_FIELDS,
   PERSONAL_FIELD_LABELS,
   type PersonalExerciseField,
@@ -17,26 +16,29 @@ import type { Profile } from "@/types/profile";
 const STORAGE_PREFIX = "projeto-verao-sync-fields:";
 
 function loadSavedFields(workoutId: string): Set<PersonalExerciseField> {
-  if (typeof window === "undefined") return new Set(ALL_PERSONAL_FIELDS);
+  if (typeof window === "undefined") return new Set();
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + workoutId);
-    if (!raw) return new Set(ALL_PERSONAL_FIELDS);
+    if (!raw) return new Set();
     const parsed = JSON.parse(raw) as string[];
     const valid = parsed.filter((field): field is PersonalExerciseField =>
       (PERSONAL_EXERCISE_FIELDS as readonly string[]).includes(field),
     );
     return new Set(valid);
   } catch {
-    return new Set(ALL_PERSONAL_FIELDS);
+    return new Set();
   }
 }
 
 /** Shown when saving a change to a workout that's linked to other profiles.
- * Structure (exercises, order, name) always syncs — that's the point of
- * staying linked — but per-exercise prescription fields (sets/reps/weight/
- * rest/notes/duration) are personal, so the user picks which of those should
- * sync too, defaulting to all of them (or their last choice for this
- * workout, remembered locally). "Só neste perfil" breaks the link entirely. */
+ * Structure (exercises, order, name, hidden state) always syncs — that's
+ * the point of staying linked — but per-exercise prescription fields
+ * (sets/reps/weight/rest/notes/duration) are personal, so the user picks
+ * which of those should sync too. Defaults to none of them (or their last
+ * choice for this workout, remembered locally): the main thing that matters
+ * about staying linked is the exercises themselves, their order, and which
+ * are hidden — not necessarily one profile's loads and reps. "Só neste
+ * perfil" breaks the link entirely. */
 export function LinkEditChoiceModal({
   open,
   workoutId,
@@ -84,8 +86,8 @@ export function LinkEditChoiceModal({
       </div>
 
       <p className="mt-4 text-xs text-slate-400">
-        Exercícios, ordem e nome do treino sempre são sincronizados. Escolha quais campos pessoais também
-        devem valer pra eles:
+        Exercícios, ordem, nome do treino e quais estão ocultos sempre são sincronizados. Escolha quais campos
+        pessoais também devem valer pra eles:
       </p>
       <div className="mt-2.5 grid grid-cols-2 gap-2">
         {PERSONAL_EXERCISE_FIELDS.map((field) => {

@@ -56,4 +56,4 @@ if (isFirebaseConfigured) {
   auth = getAuth(app);
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, firebaseConfig };

@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -42,30 +44,39 @@ export function AdminGate({ children }: { children: ReactNode }) {
   if (!unlocked) {
     return (
       <div className="grid min-h-dvh place-items-center bg-[var(--bg)] px-4 text-white">
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-sm rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.45)]"
-        >
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Área restrita</p>
-          <h1 className="mt-2 text-xl font-bold text-white">Acesso administrativo</h1>
-          <div className="mt-5">
-            <Field label="Senha">
-              <Input
-                type="password"
-                value={input}
-                onChange={(event) => {
-                  setInput(event.target.value);
-                  setError(false);
-                }}
-                autoFocus
-              />
-            </Field>
-            {error ? <p className="mt-2 text-sm text-red-300">Senha incorreta.</p> : null}
-          </div>
-          <Button type="submit" className="mt-5 w-full">
-            Entrar
-          </Button>
-        </form>
+        <div className="w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para a home
+          </Link>
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.45)]"
+          >
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Área restrita</p>
+            <h1 className="mt-2 text-xl font-bold text-white">Acesso administrativo</h1>
+            <div className="mt-5">
+              <Field label="Senha">
+                <Input
+                  type="password"
+                  value={input}
+                  onChange={(event) => {
+                    setInput(event.target.value);
+                    setError(false);
+                  }}
+                  autoFocus
+                />
+              </Field>
+              {error ? <p className="mt-2 text-sm text-red-300">Senha incorreta.</p> : null}
+            </div>
+            <Button type="submit" className="mt-5 w-full">
+              Entrar
+            </Button>
+          </form>
+        </div>
       </div>
     );
   }
